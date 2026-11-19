@@ -1,0 +1,127 @@
+
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>{% block title %}NEXOPARK{% endblock %}</title>
+
+    <link rel="stylesheet" href="{% static 'appparqueo/css/estilos.css' %}">
+
+    <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+</head>
+
+<body>
+
+    <!-- ENCABEZADO -->
+    <header class="encabezado">
+
+        <div class="logo">
+            <i class="fa-solid fa-square-parking"></i>
+            <h1>NEXOPARK</h1>
+        </div>
+
+        <div class="usuario">
+
+            {% if user.is_authenticated %}
+
+                <i class="fa-solid fa-user-circle"></i>
+                <span>Hola, {{ user.username }}</span>
+
+            {% else %}
+
+                <a href="#" class="boton-login">
+                    <i class="fa-solid fa-right-to-bracket"></i>
+                    Iniciar sesión
+                </a>
+
+                <a href="#" class="boton-registro">
+                    <i class="fa-solid fa-user-plus"></i>
+                    Registrarse
+                </a>
+
+            {% endif %}
+
+        </div>
+
+    </header>
+
+    <!-- MENU DE NAVEGACION -->
+    
+<!-- MENU DE NAVEGACION -->
+
+<!-- MENU DE NAVEGACION -->
+{% if user.is_authenticated %}
+        <nav class="menu">
+
+            <a href="{% url 'inicio' %}">
+                <i class="fa-solid fa-house"></i>
+                Inicio
+            </a>
+
+            <a href="#">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                Buscar parqueadero
+            </a>
+
+            <a href="#">
+                <i class="fa-solid fa-car"></i>
+                Mis vehículos
+            </a>
+
+            <a href="#">
+                <i class="fa-solid fa-calendar-check"></i>
+                Mis reservas
+            </a>
+
+            <a href="#">
+                <i class="fa-solid fa-user"></i>
+                Mi perfil
+            </a>
+
+        </nav>
+        {% endif %}
+
+
+    <!-- CONTENIDO PRINCIPAL -->
+    <main class="contenedor">
+
+        {% if messages %}
+            <div class="mensajes">
+                {% for message in messages %}
+                    <div class="mensaje {{ message.tags }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        {% block content %}
+        {% endblock %}
+
+    </main>
+
+    <!-- PIE DE PAGINA -->
+    <footer class="footer">
+
+        <div class="footer-logo">
+            <i class="fa-solid fa-square-parking"></i>
+            NEXOPARK
+        </div>
+
+        <p>
+            Encuentra, reserva y estaciona con facilidad.
+        </p>
+
+        <p class="copyright">
+            © 2026 NEXOPARK - Todos los derechos reservados.
+        </p>
+
+    </footer>
+
+</body>
+</html>
