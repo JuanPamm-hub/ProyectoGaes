@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Registrarse | NEXOPARK</title>
+  <link rel="stylesheet" href="../../static/appparqueo/css/registrarse.css">
+</head>
+<body>
+
+  <main class="auth-layout">
+
+    <!-- COLUMNA IZQUIERDA: Marca NEXOPARK, tarjetas visuales y mensaje -->
+    <section class="brand-panel" aria-label="Presentación de NEXOPARK">
+      <header class="brand-header">
+        <a href="#" class="brand-logo" aria-label="Inicio NEXOPARK">
+          <span class="logo-icon">P</span>
+          <span class="logo-text">NEXOPARK</span>
+        </a>
+      </header>
+
+      <!-- Composición central tipo tarjetas inspirada en los servicios de NEXOPARK -->
+      <div class="visual-showcase">
+        <div class="showcase-card main-card">
+          <span class="badge-pill">TU PARQUEADERO, A UN CLIC</span>
+          <div class="big-p-box">P</div>
+          <p class="card-caption">Consulta tarifas y reserva tu espacio de manera fácil, rápida y segura.</p>
+        </div>
+
+        <div class="mini-cards-row">
+          <div class="mini-card">
+            <span class="mini-title">Buscar parqueaderos</span>
+            <span class="mini-desc">Disponibilidad y ubicación</span>
+          </div>
+          <div class="mini-card">
+            <span class="mini-title">Reservar espacios</span>
+            <span class="mini-desc">Asegura tu cupo con tiempo</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="brand-copy">
+        <h1>Encuentra tu espacio ideal con <span class="highlight">NEXOPARK.</span></h1>
+        <p>Olvídate de perder tiempo buscando dónde estacionar.</p>
+      </div>
+    </section>
+
+    <!-- COLUMNA DERECHA: Formulario de registro -->
+    <aside class="form-panel" aria-label="Formulario de registro">
+      <div class="form-box">
+        <h2>Crear cuenta</h2>
+        <p class="form-subtitle">Regístrate en NEXOPARK para gestionar tus reservas.</p>
+
+        <!-- Cuando lo pases a Django, agrega {% csrf_token %} dentro del form -->
+        <form action="#" method="POST" class="register-form">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="nombre">Nombre</label>
+              <input type="text" id="nombre" name="nombre" placeholder="Tu nombre" required>
+            </div>
+
+            <div class="form-group">
+              <label for="apellido">Apellido</label>
+              <input type="text" id="apellido" name="apellido" placeholder="Tu apellido" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="correo">Correo electrónico</label>
+            <input type="email" id="correo" name="correo" placeholder="correo@ejemplo.com" required>
+          </div>
+
+          <div class="form-group">
+            <label for="telefono">Teléfono / Celular</label>
+            <input type="tel" id="telefono" name="telefono" placeholder="300 000 0000" required>
+          </div>
+
+          <div class="form-group">
+            <label for="password">Contraseña</label>
+            <input type="password" id="password" name="password" placeholder="Crea una contraseña" required>
+          </div>
+
+          <div class="form-group">
+            <label for="password_confirm">Confirmar contraseña</label>
+            <input type="password" id="password_confirm" name="password_confirm" placeholder="Repite la contraseña" required>
+          </div>
+
+          <button type="submit" class="btn-primary">Registrarse</button>
+        </form>
+
+        <hr class="form-divider">
+
+        <p class="secondary-action">
+          ¿Ya tienes una cuenta?
+          <a href="#" class="btn-secondary">Iniciar sesión</a>
+        </p>
+
+        <footer class="panel-footer">
+          <span>NEXOPARK · Tu parqueadero, a un clic</span>
+        </footer>
+      </div>
+    </aside>
+
+  </main>
+
+  <!-- Pie de página inferior -->
+  <footer class="page-footer">
+    <nav aria-label="Enlaces de NEXOPARK">
+      <a href="#">Explorar parqueaderos</a>
+      <a href="#">Servicios</a>
+      <a href="#">Términos</a>
+      <a href="#">Privacidad</a>
+    </nav>
+  </footer>
+
+</body>
+</html>

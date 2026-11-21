@@ -1,6 +1,7 @@
 from django.core.validators import MinValueValidator
 from django.db import models
 from django.db.models import F, Q
+from django.contrib.auth.hashers import check_password, make_password
 
 
 class Administrador(models.Model):
@@ -38,7 +39,15 @@ class Cliente(models.Model):
     apellido = models.CharField(max_length=100)
     documento = models.CharField(max_length=20, unique=True)
     telefono = models.CharField(max_length=20, blank=True)
-    correo = models.EmailField(max_length=120, unique=True, null=True, blank=True)
+    correo = models.EmailField(max_length=120, unique=True)
+    contrasena = models.CharField(max_length=255)
+    activo = models.BooleanField(default=True)
+
+    def set_contrasena(self, raw_password):
+        self.contrasena = make_password(raw_password)
+
+    def verificar_contrasena(self, raw_password):
+        return check_password(raw_password, self.contrasena)
 
     def __str__(self):
         return f"{self.nombre} {self.apellido}"

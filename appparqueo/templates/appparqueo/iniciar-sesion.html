@@ -1,0 +1,119 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Iniciar sesión - NEXOPARK</title>
+  <link rel="stylesheet" href="{% static 'appparqueo/css/iniciar-sesion.css' %}">
+</head>
+<body class="page page--auth">
+
+  <!-- BARRA SUPERIOR MÍNIMA -->
+  <header class="auth-header">
+    <div class="auth-header__container">
+      <a href="{% url 'inicio' %}" class="brand">
+        <span class="brand__logo">P</span>
+        <span class="brand__name">NEXOPARK</span>
+      </a>
+
+      <a href="{% url 'inicio' %}" class="btn btn--ghost">
+        <span class="btn__icon">&#8592;</span>
+        Volver al inicio
+      </a>
+    </div>
+  </header>
+
+  <!-- CONTENEDOR PRINCIPAL DE LOGIN CLIENTE -->
+  <main class="auth-main">
+    <section class="login-card">
+
+      <!-- Encabezado de la tarjeta -->
+      <div class="login-card__header">
+        <div class="login-card__badge-box">
+          <span class="login-card__logo">P</span>
+        </div>
+        <span class="badge">PORTAL DE CLIENTES</span>
+        <h1 class="login-card__title">Iniciar sesión</h1>
+        <p class="login-card__subtitle">
+          Ingresa con tu correo para buscar parqueaderos y gestionar tus reservas.
+        </p>
+      </div>
+
+      <!-- Formulario de inicio de sesión -->
+      <form method="POST" class="login-form">
+        {% csrf_token %}
+
+        <!-- Correo electrónico -->
+        <div class="form-group">
+          <label for="correo" class="form-label">Correo electrónico</label>
+          <div class="input-wrapper">
+            <span class="input-wrapper__icon">&#9993;</span>
+            <input
+              type="email"
+              id="correo"
+              name="correo"
+              class="form-input"
+              placeholder="tu-correo@ejemplo.com"
+              value="{{ form.correo.value|default:'' }}"
+              required
+            >
+          </div>
+        </div>
+
+        <!-- Contraseña -->
+        <div class="form-group">
+          <div class="form-label-row">
+            <label for="contrasena" class="form-label">Contraseña</label>
+            <a href="#" class="form-link">¿Olvidaste tu contraseña?</a>
+          </div>
+          <div class="input-wrapper">
+            <span class="input-wrapper__icon">&#128274;</span>
+            <input
+              type="password"
+              id="contrasena"
+              name="contrasena"
+              class="form-input"
+              placeholder="Ingresa tu contraseña"
+              required
+            >
+            <button type="button" class="input-wrapper__toggle" aria-label="Mostrar contraseña">
+              &#128065;
+            </button>
+          </div>
+        </div>
+
+        <!-- Recordar sesión -->
+        <div class="form-options">
+          <label class="checkbox-label">
+            <input type="checkbox" name="recordar" class="checkbox-label__input">
+            <span class="checkbox-label__text">Mantener sesión iniciada</span>
+          </label>
+        </div>
+
+        <!-- Mensaje de error -->
+        <div class="form-alert form-alert--error {% if error_mensaje %}form-alert--visible{% endif %}" role="alert">
+          <span class="form-alert__icon">&#9888;</span>
+          <p class="form-alert__text">{{ error_mensaje|default:"Correo o contraseña incorrectos. Inténtalo de nuevo." }}</p>
+        </div>
+
+        <!-- Botón enviar -->
+        <button type="submit" class="btn btn--primary btn--full">
+          Iniciar sesión
+        </button>
+
+      </form>
+
+      <!-- Pie de tarjeta con enlace a registro -->
+      <footer class="login-card__footer">
+        <p class="login-card__register">
+          ¿Aún no tienes una cuenta?
+          <a href="#" class="form-link form-link--bold">Regístrate aquí</a>
+        </p>
+      </footer>
+
+    </section>
+  </main>
+
+</body>
+</html>

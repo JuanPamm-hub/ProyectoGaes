@@ -27,14 +27,14 @@
 
         <div class="usuario">
 
-            {% if user.is_authenticated %}
+            {% if request.session.cliente_id %}
 
                 <i class="fa-solid fa-user-circle"></i>
-                <span>Hola, {{ user.username }}</span>
+                <span>Hola, {{ request.session.cliente_nombre }}</span>
 
             {% else %}
 
-                <a href="#" class="boton-login">
+                <a href="{% url 'iniciar_sesion' %}" class="boton-login">
                     <i class="fa-solid fa-right-to-bracket"></i>
                     Iniciar sesión
                 </a>
@@ -55,7 +55,7 @@
 <!-- MENU DE NAVEGACION -->
 
 <!-- MENU DE NAVEGACION -->
-{% if user.is_authenticated %}
+{% if request.session.cliente_id %}
         <nav class="menu">
 
             <a href="{% url 'inicio' %}">
@@ -84,7 +84,7 @@
             </a>
 
         </nav>
-        {% endif %}
+{% endif %}
 
 
     <!-- CONTENIDO PRINCIPAL -->
