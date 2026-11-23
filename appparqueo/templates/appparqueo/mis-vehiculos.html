@@ -1,0 +1,200 @@
+{% extends 'appparqueo/base.html' %}
+{% load static %}
+
+{% block title %}Mis vehículos | NEXOPARK{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'appparqueo/css/mis-vehiculos.css' %}">
+{% endblock %}
+
+{% block content %}
+<section class="vehiculos-page">
+  <div class="vehiculos-header">
+    <div>
+      <h1>Mis <span class="highlight">vehículos</span></h1>
+      <p>Registra, edita o elimina los vehículos asociados a tu cuenta para reservar cupo rápido.</p>
+    </div>
+  </div>
+
+  {% if messages %}
+    <div class="mensajes-lista">
+      {% for message in messages %}
+        <div class="mensaje-alerta {{ message.tags }}">{{ message }}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <div class="stats-grid">
+    <div class="stat-card destacada">
+      <span class="stat-label">Total registrados</span>
+      <span class="stat-value">{{ total_vehiculos }}</span>
+      <span class="stat-sub">En tu cuenta</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-label">Carros</span>
+      <span class="stat-value">{{ total_carros }}</span>
+      <span class="stat-sub">Tipo CARRO</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-label">Motos</span>
+      <span class="stat-value">{{ total_motos }}</span>
+      <span class="stat-sub">Tipo MOTO</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-label">Bicicletas y otros</span>
+      <span class="stat-value">{{ total_otros }}</span>
+      <span class="stat-sub">BICICLETA / OTRO</span>
+    </div>
+  </div>
+
+  <div class="vehiculos-grid">
+    <!-- Listado de vehículos del cliente -->
+    <div class="panel-box">
+      <div class="panel-box-header">
+        <h2>Vehículos registrados</h2>
+        <p>Estos vehículos aparecerán disponibles al momento de reservar en el mapa.</p>
+      </div>
+
+      {% if vehiculos %}
+        <div class="tabla-wrapper">
+          <table class="tabla-vehiculos">
+            <thead>
+              <tr>
+                <th>Placa</th>
+                <th>Tipo</th>
+                <th>Marca</th>
+                <th>Modelo</th>
+                <th>Color</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for v in vehiculos %}
+                <tr>
+                  <td><span class="placa-badge">{{ v.placa }}</span></td>
+                  <td><span class="tipo-pill">{{ v.get_tipo_display }}</span></td>
+                  <td>{{ v.marca|default:"—" }}</td>
+                  <td>{{ v.modelo|default:"—" }}</td>
+                  <td>{{ v.color|default:"—" }}</td>
+                  <td>
+                    <div class="acciones-celda">
+                      <a href="{% url 'editar_vehiculo' v.id %}" class="btn-accion editar">Editar</a>
+                      <form
+                        action="{% url 'eliminar_vehiculo' v.id %}"
+                        method="POST"
+                        onsubmit="return confirm('¿Seguro que deseas eliminar el vehículo {{ v.placa }}?');"
+                      >
+                        {% csrf_token %}
+                        <button type="submit" class="btn-accion eliminar">Eliminar</button>
+                      </form>
+                    </div>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="estado-sin-datos">
+          Aún no tienes vehículos registrados. Agrega el primero en el formulario de al lado.
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- Formulario para agregar o editar vehículo -->
+    <div class="panel-box">
+      <div class="panel-box-header">
+        {% if vehiculo_editar %}
+          <h2>Editar vehículo ({{ vehiculo_editar.placa }})</h2>
+          <p>Actualiza los datos de tu vehículo y guarda los cambios.</p>
+        {% else %}
+          <h2>Agregar vehículo</h2>
+          <p>Completa los datos básicos de tu vehículo.</p>
+        {% endif %}
+      </div>
+
+      <form
+        action="{% if vehiculo_editar %}{% url 'editar_vehiculo' vehiculo_editar.id %}{% else %}{% url 'mis_vehiculos' %}{% endif %}"
+        method="POST"
+        class="form-vehiculo"
+      >
+        {% csrf_token %}
+
+        <div class="fila-doble">
+          <div class="campo-item">
+            <label for="id_placa">Placa *</label>
+            <input
+              type="text"
+              id="id_placa"
+              name="placa"
+              maxlength="10"
+              value="{{ vehiculo_editar.placa|default:'' }}"
+              placeholder="Ej: ABC123"
+              required
+            >
+          </div>
+
+          <div class="campo-item">
+            <label for="id_tipo">Tipo de vehículo *</label>
+            <select id="id_tipo" name="tipo" required>
+              {% for codigo, etiqueta in tipos_vehiculo %}
+                <option value="{{ codigo }}" {% if vehiculo_editar and vehiculo_editar.tipo == codigo %}selected{% endif %}>
+                  {{ etiqueta }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <div class="fila-doble">
+          <div class="campo-item">
+            <label for="id_marca">Marca</label>
+            <input
+              type="text"
+              id="id_marca"
+              name="marca"
+              maxlength="50"
+              value="{{ vehiculo_editar.marca|default:'' }}"
+              placeholder="Ej: Yamaha, Chevrolet"
+            >
+          </div>
+
+          <div class="campo-item">
+            <label for="id_modelo">Modelo</label>
+            <input
+              type="text"
+              id="id_modelo"
+              name="modelo"
+              maxlength="50"
+              value="{{ vehiculo_editar.modelo|default:'' }}"
+              placeholder="Ej: 2024"
+            >
+          </div>
+        </div>
+
+        <div class="campo-item">
+          <label for="id_color">Color</label>
+          <input
+            type="text"
+            id="id_color"
+            name="color"
+            maxlength="30"
+            value="{{ vehiculo_editar.color|default:'' }}"
+            placeholder="Ej: Negro"
+          >
+        </div>
+
+        <div class="botones-form-fila">
+          <button type="submit" class="btn-guardar-vehiculo">
+            {% if vehiculo_editar %}Guardar cambios{% else %}Guardar vehículo{% endif %}
+          </button>
+
+          {% if vehiculo_editar %}
+            <a href="{% url 'mis_vehiculos' %}" class="btn-cancelar-edicion">Cancelar edición</a>
+          {% endif %}
+        </div>
+      </form>
+    </div>
+  </div>
+</section>
+{% endblock %}

@@ -1,7 +1,18 @@
+from django.contrib.auth.hashers import check_password, identify_hasher, make_password
+from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
 from django.db.models import F, Q
-from django.contrib.auth.hashers import check_password, make_password
+
+
+def _hashear_si_no_es_hash(valor):
+    if not valor:
+        return valor
+    try:
+        identify_hasher(valor)
+        return valor
+    except Exception:
+        return make_password(valor)
 
 
 class Administrador(models.Model):
@@ -11,10 +22,23 @@ class Administrador(models.Model):
     telefono = models.CharField(max_length=20, blank=True)
     correo = models.EmailField(max_length=120, unique=True)
     contrasena = models.CharField(max_length=255)
+    activo = models.BooleanField(default=True)
 
     class Meta:
         verbose_name = "administrador"
         verbose_name_plural = "administradores"
+
+    def set_contrasena(self, raw_password):
+        self.contrasena = make_password(raw_password)
+
+    def verificar_contrasena(self, raw_password):
+        if not self.contrasena:
+            return False
+        return check_password(raw_password, self.contrasena)
+
+    def save(self, *args, **kwargs):
+        self.contrasena = _hashear_si_no_es_hash(self.contrasena)
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.nombre} {self.apellido}"
@@ -25,10 +49,30 @@ class Parqueadero(models.Model):
     direccion = models.CharField(max_length=150)
     telefono = models.CharField(max_length=20, blank=True)
     capacidad_total = models.PositiveIntegerField(validators=[MinValueValidator(1)])
-    # Administrador 1 : N Parqueadero (TIENE)
+    latitud = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    longitud = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+
     administrador = models.ForeignKey(
         Administrador, on_delete=models.PROTECT, related_name="parqueaderos"
     )
+
+    def clean(self):
+        super().clean()
+        if self.pk:
+            espacios_registrados = self.espacios.count()
+            if self.capacidad_total < espacios_registrados:
+                raise ValidationError(
+                    {
+                        "capacidad_total": (
+                            f"La capacidad total ({self.capacidad_total}) no puede ser menor "
+                            f"a los {espacios_registrados} espacios ya registrados en este parqueadero."
+                        )
+                    }
+                )
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.nombre
@@ -77,8 +121,17 @@ class Vehiculo(models.Model):
 class Tarifa(models.Model):
     descripcion = models.CharField(max_length=100)
     tipo_vehiculo = models.CharField(max_length=30, choices=Vehiculo.Tipo.choices)
+    valor_minuto = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0)],
+    )
     valor_hora = models.DecimalField(
-        max_digits=10, decimal_places=2, validators=[MinValueValidator(0)]
+        max_digits=10,
+        decimal_places=2,
+        validators=[MinValueValidator(0)],
     )
     valor_dia = models.DecimalField(
         max_digits=10,
@@ -103,7 +156,11 @@ class Espacio(models.Model):
         MANTENIMIENTO = "MANTENIMIENTO", "Mantenimiento"
 
     numero = models.CharField(max_length=10)
-    tipo = models.CharField(max_length=30)
+    tipo = models.CharField(
+        max_length=30,
+        choices=Vehiculo.Tipo.choices,
+        default=Vehiculo.Tipo.CARRO,
+    )
     estado = models.CharField(
         max_length=20, choices=Estado.choices, default=Estado.DISPONIBLE
     )
@@ -119,20 +176,61 @@ class Espacio(models.Model):
             )
         ]
 
+    def clean(self):
+        super().clean()
+        if self.parqueadero_id:
+            qs = Espacio.objects.filter(parqueadero=self.parqueadero)
+            if self.pk:
+                qs = qs.exclude(pk=self.pk)
+
+            if qs.count() + 1 > self.parqueadero.capacidad_total:
+                raise ValidationError(
+                    f"No se pueden agregar más espacios: '{self.parqueadero.nombre}' "
+                    f"tiene una capacidad máxima de {self.parqueadero.capacidad_total} espacios."
+                )
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return f"Espacio {self.numero} - {self.parqueadero}"
 
 
 class Empleado(models.Model):
+    class NivelAcceso(models.TextChoices):
+        OPERADOR = "OPERADOR", "Operador de parqueo"
+        CAJERO = "CAJERO", "Caja y reservas"
+
     nombre = models.CharField(max_length=100)
     apellido = models.CharField(max_length=100)
     documento = models.CharField(max_length=20, unique=True)
     cargo = models.CharField(max_length=50)
     telefono = models.CharField(max_length=20, blank=True)
+    correo = models.EmailField(max_length=120, unique=True, null=True, blank=True)
+    contrasena = models.CharField(max_length=255, blank=True)
+    nivel_acceso = models.CharField(
+        max_length=20,
+        choices=NivelAcceso.choices,
+        default=NivelAcceso.OPERADOR,
+    )
+    activo = models.BooleanField(default=True)
     # Parqueadero 1 : N Empleado (TRABAJA)
     parqueadero = models.ForeignKey(
         Parqueadero, on_delete=models.PROTECT, related_name="empleados"
     )
+
+    def set_contrasena(self, raw_password):
+        self.contrasena = make_password(raw_password)
+
+    def verificar_contrasena(self, raw_password):
+        if not self.contrasena:
+            return False
+        return check_password(raw_password, self.contrasena)
+
+    def save(self, *args, **kwargs):
+        self.contrasena = _hashear_si_no_es_hash(self.contrasena)
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.nombre} {self.apellido} - {self.cargo}"

@@ -1,0 +1,105 @@
+{% extends 'appparqueo/base.html' %}
+{% load static %}
+
+{% block title %}Mi perfil | NEXOPARK{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'appparqueo/css/mi-perfil.css' %}">
+{% endblock %}
+
+{% block content %}
+<section class="perfil-wrapper">
+  <div class="perfil-banner">
+    <div class="perfil-identidad">
+      <div class="perfil-avatar">{{ iniciales }}</div>
+      <div>
+        <h1>{{ cliente.nombre }} {{ cliente.apellido }}</h1>
+        <p>{{ cliente.correo }} · Doc: {{ cliente.documento }}</p>
+      </div>
+    </div>
+
+    <div class="perfil-contadores">
+      <div class="contador-pill">
+        <strong>{{ total_vehiculos }}</strong>
+        <span>Vehículos</span>
+      </div>
+      <div class="contador-pill">
+        <strong>{{ total_reservas }}</strong>
+        <span>Reservas</span>
+      </div>
+    </div>
+  </div>
+
+  {% if messages %}
+    <div class="mensajes-perfil">
+      {% for message in messages %}
+        <div class="alerta-perfil {{ message.tags }}">{{ message }}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <div class="perfil-seccion">
+    <h2>Datos de tu perfil</h2>
+    <p class="sub">Puedes actualizar tu información de contacto o cambiar tu contraseña.</p>
+
+    <form method="POST" class="form-perfil">
+      {% csrf_token %}
+
+      <div class="grid-2">
+        <div class="campo-perfil">
+          <label for="id_nombre">Nombre *</label>
+          <input type="text" id="id_nombre" name="nombre" value="{{ cliente.nombre }}" required>
+        </div>
+
+        <div class="campo-perfil">
+          <label for="id_apellido">Apellido *</label>
+          <input type="text" id="id_apellido" name="apellido" value="{{ cliente.apellido }}" required>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="campo-perfil">
+          <label for="id_documento">Documento</label>
+          <input type="text" id="id_documento" value="{{ cliente.documento }}" disabled>
+        </div>
+
+        <div class="campo-perfil">
+          <label for="id_telefono">Teléfono</label>
+          <input type="text" id="id_telefono" name="telefono" value="{{ cliente.telefono }}">
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="campo-perfil">
+          <label for="id_correo">Correo electrónico *</label>
+          <input type="email" id="id_correo" name="correo" value="{{ cliente.correo }}" required>
+        </div>
+
+        <div class="campo-perfil">
+          <label for="id_nueva_contrasena">Nueva contraseña (opcional)</label>
+          <input type="password" id="id_nueva_contrasena" name="nueva_contrasena" placeholder="Déjalo vacío para mantenerla">
+        </div>
+      </div>
+
+      <button type="submit" class="btn-guardar-perfil">Guardar cambios</button>
+    </form>
+  </div>
+
+  <div class="perfil-seccion zona-peligro">
+    <h2>Eliminar cuenta</h2>
+    <p class="sub">
+      Esta acción elimina permanentemente tu cuenta de cliente si no tienes vehículos ni reservas asociadas.
+      Para confirmar, escribe <strong>ELIMINAR</strong>.
+    </p>
+
+    <form action="{% url 'eliminar_cuenta_cliente' %}" method="POST" class="form-eliminar-cuenta">
+      {% csrf_token %}
+      <div class="campo-perfil">
+        <label for="id_confirmar_eliminacion">Confirmación</label>
+        <input type="text" id="id_confirmar_eliminacion" name="confirmar_eliminacion" placeholder="Escribe ELIMINAR">
+      </div>
+      <button type="submit" class="btn-eliminar-cuenta">Eliminar mi cuenta</button>
+    </form>
+  </div>
+</section>
+{% endblock %}

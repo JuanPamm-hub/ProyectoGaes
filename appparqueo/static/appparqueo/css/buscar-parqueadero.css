@@ -1,0 +1,467 @@
+.buscador-header-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.buscador-header-bar h2 {
+  margin: 0 0 2px 0;
+  font-size: 1.3rem;
+}
+
+.buscador-header-bar p {
+  margin: 0;
+  font-size: 0.83rem;
+  color: #94a3b8;
+}
+
+.btn-gps {
+  background: linear-gradient(135deg, #7c3aed, #4f46e5);
+  color: #ffffff;
+  border: none;
+  padding: 9px 15px;
+  border-radius: 9px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.workspace-mapa {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 370px;
+  gap: 14px;
+  height: calc(100vh - 185px);
+  min-height: 540px;
+  max-height: 820px;
+}
+
+.mapa-area {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 540px;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid rgba(139, 92, 246, 0.25);
+}
+
+#map {
+  width: 100%;
+  height: 100%;
+  background-color: #141422;
+}
+
+.mapa-badge-contador {
+  position: absolute;
+  bottom: 14px;
+  left: 14px;
+  z-index: 500;
+  background: rgba(15, 15, 27, 0.92);
+  border: 1px solid rgba(139, 92, 246, 0.35);
+  color: #f8fafc;
+  padding: 8px 14px;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mapa-badge-contador i {
+  color: #a78bfa;
+}
+
+/* PINES SEMÁFORO FORZADOS */
+.nexopark-pin {
+  background: transparent !important;
+  border: none !important;
+}
+
+.pin-circulo {
+  width: 34px;
+  height: 34px;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #ffffff;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.45);
+}
+
+.pin-circulo span {
+  transform: rotate(45deg);
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 14px;
+}
+
+.pin-circulo.pin-verde {
+  background: linear-gradient(135deg, #15803d, #22c55e) !important;
+}
+
+.pin-circulo.pin-amarillo {
+  background: linear-gradient(135deg, #b45309, #eab308) !important;
+}
+
+.pin-circulo.pin-rojo {
+  background: linear-gradient(135deg, #b91c1c, #ef4444) !important;
+}
+
+.punto-estado {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  margin-right: 5px;
+}
+
+.punto-estado.pin-verde { background: #22c55e !important; }
+.punto-estado.pin-amarillo { background: #eab308 !important; }
+.punto-estado.pin-rojo { background: #ef4444 !important; }
+
+.panel-derecho {
+  background: #11111e;
+  border: 1px solid rgba(139, 92, 246, 0.22);
+  border-radius: 14px;
+  padding: 14px;
+  height: 100%;
+  max-height: 100%;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+
+.panel-header h3,
+.reserva-box h4,
+.lista-parqueaderos-box h4 {
+  margin: 0 0 3px 0;
+  font-size: 0.96rem;
+}
+
+.panel-header p {
+  margin: 0;
+  font-size: 0.79rem;
+  color: #94a3b8;
+}
+
+.detalle-card,
+.reserva-box,
+.ruta-box {
+  background: #18182b;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.ruta-box {
+  border-color: rgba(59, 130, 246, 0.35);
+}
+
+.filtros-viaje-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.ruta-datos {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.ruta-datos small {
+  display: block;
+  font-size: 0.72rem;
+  color: #94a3b8;
+}
+
+.ruta-datos strong {
+  font-size: 0.96rem;
+  color: #93c5fd;
+}
+
+.btn-ruta {
+  width: 100%;
+  background: rgba(59, 130, 246, 0.18);
+  color: #bfdbfe;
+  border: 1px solid rgba(59, 130, 246, 0.45);
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+
+.btn-ruta:hover {
+  background: rgba(59, 130, 246, 0.3);
+}
+
+.reserva-box {
+  border-color: rgba(124, 58, 237, 0.35);
+}
+
+.oculto {
+  display: none !important;
+}
+
+.estado-vacio {
+  text-align: center;
+  color: #94a3b8;
+  font-size: 0.84rem;
+  padding: 8px 4px;
+}
+
+.estado-vacio i {
+  font-size: 1.35rem;
+  color: #8b5cf6;
+  margin-bottom: 6px;
+  display: block;
+}
+
+.tag-estado {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 999px;
+  margin-bottom: 8px;
+}
+
+.tag-verde {
+  color: #86efac;
+  background: rgba(34, 197, 94, 0.16);
+}
+
+.tag-amarillo {
+  color: #fde047;
+  background: rgba(245, 158, 11, 0.18);
+}
+
+.tag-rojo {
+  color: #fca5a5;
+  background: rgba(239, 68, 68, 0.18);
+}
+
+.detalle-nombre {
+  margin: 0 0 6px 0;
+  font-size: 1.02rem;
+}
+
+.detalle-direccion,
+.detalle-tel {
+  margin: 4px 0;
+  font-size: 0.82rem;
+  color: #cbd5e1;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.datos-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 10px 0;
+}
+
+.dato-caja {
+  background: #11111e;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.dato-caja small {
+  display: block;
+  font-size: 0.72rem;
+  color: #94a3b8;
+}
+
+.dato-caja strong {
+  font-size: 0.88rem;
+  color: #ffffff;
+}
+
+.campo-grupo {
+  margin-bottom: 10px;
+}
+
+.campo-grupo label {
+  display: block;
+  font-size: 0.78rem;
+  color: #cbd5e1;
+  margin-bottom: 4px;
+}
+
+.campo-grupo input,
+.campo-grupo select {
+  width: 100%;
+  padding: 8px 10px;
+  margin-bottom: 0;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: #11111e;
+  color: #ffffff;
+  font-size: 0.83rem;
+}
+
+.checkbox-inline {
+  display: flex !important;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 0.82rem;
+  color: #e2e8f0;
+  cursor: pointer;
+  line-height: 1.35;
+}
+
+.checkbox-inline input[type="checkbox"] {
+  width: 17px !important;
+  height: 17px !important;
+  min-width: 17px;
+  margin: 2px 0 0 0 !important;
+  padding: 0 !important;
+  accent-color: #7c3aed;
+  cursor: pointer;
+}
+
+.ayuda-campo {
+  display: block;
+  margin-top: 5px;
+  font-size: 0.73rem;
+  color: #94a3b8;
+  line-height: 1.35;
+}
+
+.sin-vehiculos-aviso {
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  border-radius: 10px;
+  padding: 12px;
+  text-align: center;
+  color: #fde68a;
+  font-size: 0.82rem;
+}
+
+.sin-vehiculos-aviso i {
+  display: block;
+  font-size: 1.2rem;
+  margin-bottom: 6px;
+}
+
+.resumen-cobro {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #11111e;
+  border: 1px solid rgba(139, 92, 246, 0.25);
+  border-radius: 8px;
+  padding: 9px 11px;
+  margin-bottom: 10px;
+  font-size: 0.84rem;
+}
+
+.resumen-cobro strong {
+  color: #c4b5fd;
+  font-size: 0.95rem;
+}
+
+.btn-reservar-principal {
+  width: 100%;
+  background: linear-gradient(135deg, #7c3aed, #4f46e5);
+  color: #ffffff;
+  border: none;
+  padding: 10px 14px;
+  border-radius: 9px;
+  font-weight: 600;
+  font-size: 0.86rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.lista-items {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.item-parqueadero {
+  width: 100%;
+  text-align: left;
+  background: #18182b;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 10px;
+  padding: 10px 12px;
+  color: #f8fafc;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.item-parqueadero strong {
+  display: block;
+  font-size: 0.85rem;
+}
+
+.item-parqueadero small {
+  color: #94a3b8;
+  font-size: 0.75rem;
+}
+
+.item-parqueadero.activo,
+.item-parqueadero:hover {
+  border-color: #8b5cf6;
+  background: rgba(124, 58, 237, 0.15);
+}
+
+.item-tarifa {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #c4b5fd;
+  white-space: nowrap;
+}
+
+.texto-muted {
+  color: #94a3b8;
+  font-size: 0.82rem;
+}
+
+@media (max-width: 950px) {
+  .workspace-mapa {
+    grid-template-columns: 1fr;
+    height: auto;
+    min-height: auto;
+    max-height: none;
+  }
+
+  .mapa-area {
+    height: 460px;
+    min-height: 460px;
+  }
+
+  .panel-derecho {
+    height: auto;
+    max-height: none;
+  }
+}

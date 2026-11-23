@@ -31,16 +31,20 @@ a {
 }
 
 
-/* 2. ENCABEZADO */
+/* 2. ENCABEZADO FIJO COMPACTO */
 
 .encabezado {
+    position: fixed;
+    top: 0;
+    left: 0;
     width: 100%;
-    min-height: 82px;
+    height: 62px;
+    z-index: 1000;
     background: #101116;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 15px 7%;
+    padding: 8px 5%;
     color: #FFFFFF;
     border-bottom: 2px solid #7027C5;
     box-shadow: 0 4px 15px rgba(0,0,0,0.35);
@@ -49,18 +53,18 @@ a {
 .logo {
     display: flex;
     align-items: center;
-    gap: 14px;
+    gap: 10px;
 }
 
 .logo i {
-    font-size: 38px;
+    font-size: 28px;
     color: #FFFFFF;
 }
 
 .logo h1 {
-    font-size: 29px;
+    font-size: 22px;
     font-weight: 800;
-    letter-spacing: 2px;
+    letter-spacing: 1.5px;
     color: #FFFFFF;
     text-shadow: 0 0 18px rgba(255, 255, 255, 0.16);
 }
@@ -68,11 +72,12 @@ a {
 .usuario {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
+    font-size: 13px;
 }
 
 .usuario i {
-    font-size: 25px;
+    font-size: 20px;
     color: #8D5BE8;
 }
 
@@ -89,10 +94,10 @@ a {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 9px;
-    padding: 12px 19px;
-    border-radius: 9px;
-    font-size: 14px;
+    gap: 7px;
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-size: 13px;
     font-weight: 700;
 }
 
@@ -121,17 +126,21 @@ a {
 }
 
 
-/* 4. MENU DE NAVEGACION */
+/* 4. MENU DE NAVEGACION FIJO COMPACTO */
 
 .menu {
+    position: fixed;
+    top: 62px;
+    left: 0;
     width: 100%;
-    min-height: 62px;
+    min-height: 46px;
+    z-index: 999;
     background: #14151D;
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 12px;
-    padding: 10px 20px;
+    gap: 8px;
+    padding: 6px 16px;
     flex-wrap: wrap;
     border-bottom: 1px solid rgba(255, 255, 255, 0.10);
     box-shadow: 0 3px 12px rgba(0,0,0,0.25);
@@ -140,12 +149,12 @@ a {
 .menu a {
     display: flex;
     align-items: center;
-    gap: 9px;
+    gap: 7px;
     color: #F2F3F8;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 650;
-    padding: 12px 17px;
-    border-radius: 9px;
+    padding: 8px 13px;
+    border-radius: 8px;
     border-bottom: 2px solid transparent;
 }
 
@@ -164,10 +173,18 @@ a {
 /* 5. CONTENEDOR PRINCIPAL */
 
 .contenedor {
-    width: 94%;
-    max-width: 1450px;
-    margin: 35px auto;
+    width: 95%;
+    max-width: 1480px;
+    margin: 20px auto;
     flex: 1;
+}
+
+body.con-menu .contenedor {
+    padding-top: 102px;
+}
+
+body.sin-menu .contenedor {
+    padding-top: 62px;
 }
 
 
@@ -753,15 +770,26 @@ tbody tr:hover {
 
 @media screen and (max-width: 768px) {
 
+    .encabezado,
+    .menu {
+        position: static;
+        height: auto;
+    }
+
+    body.con-menu .contenedor,
+    body.sin-menu .contenedor {
+        padding-top: 10px;
+    }
+
     .encabezado {
         flex-direction: column;
-        gap: 18px;
-        padding: 20px;
+        gap: 12px;
+        padding: 14px;
         text-align: center;
     }
 
     .logo h1 {
-        font-size: 25px;
+        font-size: 20px;
     }
 
     .usuario {
@@ -771,17 +799,18 @@ tbody tr:hover {
 
     .menu {
         flex-direction: column;
-        gap: 5px;
+        gap: 4px;
     }
 
     .menu a {
         width: 100%;
         justify-content: center;
+        padding: 7px 10px;
     }
 
     .contenedor {
         width: 94%;
-        margin: 22px auto;
+        margin: 18px auto;
     }
 
     .tarjeta {
@@ -845,12 +874,12 @@ tbody tr:hover {
 @media screen and (max-width: 480px) {
 
     .logo h1 {
-        font-size: 22px;
+        font-size: 18px;
     }
 
     .boton-login,
     .boton-registro {
-        padding: 10px 13px;
+        padding: 8px 11px;
         font-size: 12px;
     }
 

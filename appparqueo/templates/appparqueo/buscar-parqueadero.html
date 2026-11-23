@@ -1,0 +1,583 @@
+{% extends 'appparqueo/base.html' %}
+{% load static %}
+
+{% block title %}Buscar parqueadero | NEXOPARK{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="{% static 'appparqueo/css/buscar-parqueadero.css' %}">
+{% endblock %}
+
+{% block content %}
+  <div class="buscador-header-bar">
+    <div>
+      <h2>Buscar parqueadero</h2>
+      <p>Verde: disponible · Amarillo: medio lleno · Rojo: casi lleno o sin cupo.</p>
+    </div>
+
+    <button type="button" class="btn-gps" onclick="ubicarUsuario(false)">
+      <i class="fa-solid fa-location-crosshairs"></i>
+      Mi ubicación
+    </button>
+  </div>
+
+  {% if messages %}
+    <div class="mensajes-sistema">
+      {% for message in messages %}
+        <div class="alerta-mensaje {{ message.tags }}">{{ message }}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <section class="workspace-mapa">
+
+    <!-- ÁREA DEL MAPA -->
+    <div class="mapa-area" aria-label="Mapa de parqueaderos">
+      <div id="map"></div>
+
+      <div class="mapa-badge-contador">
+        <i class="fa-solid fa-square-parking"></i>
+        <span>{{ total_parqueaderos }} parqueadero(s) en mapa</span>
+      </div>
+    </div>
+
+    <!-- PANEL LATERAL DERECHO -->
+    <aside class="panel-derecho" aria-label="Información y reserva del parqueadero">
+      <div class="panel-header">
+        <h3 id="panel-titulo">Escoge el parqueadero</h3>
+        <p id="panel-subtitulo">Haz clic en un pin del mapa o en la lista para ver detalles, ruta y reservar.</p>
+      </div>
+
+      <div id="detalle-parqueadero" class="detalle-card">
+        <div class="estado-vacio">
+          <i class="fa-solid fa-hand-pointer"></i>
+          <p><strong>Escoge el parqueadero</strong><br>Selecciona uno en el mapa o en la lista de abajo para continuar.</p>
+        </div>
+      </div>
+
+      <!-- TIEMPO DE LLEGADA SEGÚN VEHÍCULO -->
+      <div id="info-ruta-box" class="ruta-box oculto">
+        <div class="ruta-datos">
+          <div>
+            <small>Tiempo de llegada</small>
+            <strong id="ruta-tiempo">-- min</strong>
+          </div>
+          <div>
+            <small>Distancia</small>
+            <strong id="ruta-distancia">-- km</strong>
+          </div>
+        </div>
+
+        <button type="button" class="btn-ruta" onclick="trazarRutaSeleccionada()">
+          <i class="fa-solid fa-route"></i>
+          Mostrar ruta desde mi ubicación
+        </button>
+      </div>
+
+      <!-- RESERVA ASOCIADA A VEHÍCULO REGISTRADO -->
+      <div id="seccion-reserva" class="reserva-box oculto">
+        <h4>Reservar cupo</h4>
+
+        {% if tiene_vehiculos %}
+          <form action="{% url 'buscar_parqueadero' %}" method="POST" class="form-reserva-rapida">
+            {% csrf_token %}
+            <input type="hidden" id="parqueadero_id_input" name="parqueadero_id">
+
+            <div class="campo-grupo">
+              <label for="vehiculo_registrado_select">Vehículo registrado</label>
+              <select id="vehiculo_registrado_select" name="vehiculo_id" onchange="onCambioVehiculoRegistrado()" required>
+                {% for v in vehiculos_cliente %}
+                  <option value="{{ v.id }}" data-tipo="{{ v.tipo }}">
+                    {{ v.placa }} — {{ v.get_tipo_display|default:v.tipo }}{% if v.marca %} ({{ v.marca }}){% endif %}
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="campo-grupo">
+              <label class="checkbox-inline" for="otra_hora_llegada">
+                <input type="checkbox" id="otra_hora_llegada" name="otra_hora_llegada" onchange="toggleHoraLlegada()">
+                <span>Programar llegada a otra hora (si aún no vas en camino)</span>
+              </label>
+            </div>
+
+            <div id="bloque-hora-llegada" class="campo-grupo oculto">
+              <label for="hora_llegada_aprox">Hora estimada de llegada</label>
+              <input type="time" id="hora_llegada_aprox" name="hora_llegada_aprox">
+              <small class="ayuda-campo">Si no marcas la casilla anterior, tomaremos el tiempo estimado del mapa.</small>
+            </div>
+
+            <div class="campo-grupo">
+              <label for="duracion_reserva">Tiempo de estadía</label>
+              <select id="duracion_reserva" name="tramo_estadia" onchange="actualizarEstimadoReserva()">
+                <option value="min_30">30 minutos</option>
+                <option value="hora_1" selected>1 hora</option>
+                <option value="hora_2">2 horas</option>
+                <option value="dia_1">2 horas y media / Día (tope día)</option>
+                <option value="dia_2">2 días</option>
+                <option value="dia_3">3 días</option>
+              </select>
+            </div>
+
+            <div class="resumen-cobro">
+              <span>Estadía estimada:</span>
+              <strong id="total-estimado-reserva">$0</strong>
+            </div>
+            <p id="aviso-disponibilidad-tipo" class="ayuda-campo oculto"></p>
+
+            <button type="submit" id="btn-confirmar-reserva" class="btn-reservar-principal">
+              <i class="fa-solid fa-calendar-check"></i>
+              Confirmar reserva
+            </button>
+          </form>
+        {% else %}
+          <div class="sin-vehiculos-aviso">
+            <i class="fa-solid fa-car-side"></i>
+            <p>No tienes ningún vehículo registrado en tu cuenta. Debes registrar un vehículo antes de realizar una reserva.</p>
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- LISTA AL FINAL PARA CAMBIAR DE PARQUEADERO SI QUIERE -->
+      <div class="lista-parqueaderos-box">
+        <h4>Parqueaderos registrados</h4>
+        <div id="lista-parqueaderos" class="lista-items"></div>
+      </div>
+    </aside>
+
+  </section>
+{% endblock %}
+
+{% block extra_js %}
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    const parqueaderos = {{ parqueaderos_json|safe }};
+
+    const centroInicial = parqueaderos.length > 0
+      ? [parqueaderos[0].lat, parqueaderos[0].lng]
+      : [4.5794, -74.2168];
+
+    const map = L.map("map", { zoomControl: true }).setView(centroInicial, 14);
+
+    L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}", {
+      attribution: "Tiles &copy; Esri",
+      maxZoom: 16
+    }).addTo(map);
+
+    L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}", {
+      attribution: "Tiles &copy; Esri",
+      maxZoom: 16
+    }).addTo(map);
+
+    function obtenerEstadoOcupacion(p) {
+      const total = Number(p.capacidad_ref) || Number(p.capacidad_total) || 0;
+      const libres = Number(p.cupos_libres) || 0;
+
+      if (total <= 0 || libres <= 0) {
+        return { clase: "pin-rojo", tagClase: "tag-rojo", texto: "Sin cupos (0)" };
+      }
+
+      const porcentajeLibre = (libres / total) * 100;
+
+      if (porcentajeLibre > 50) {
+        return { clase: "pin-verde", tagClase: "tag-verde", texto: `${libres} cupos libres` };
+      } else if (porcentajeLibre >= 20) {
+        return { clase: "pin-amarillo", tagClase: "tag-amarillo", texto: `${libres} cupos (medio lleno)` };
+      } else {
+        return { clase: "pin-rojo", tagClase: "tag-rojo", texto: `¡Últimos ${libres} cupos!` };
+      }
+    }
+
+    function crearPinNexopark(claseColor) {
+      return L.divIcon({
+        className: "nexopark-pin",
+        html: `<div class="pin-circulo ${claseColor}"><span>P</span></div>`,
+        iconSize: [34, 34],
+        iconAnchor: [17, 34],
+        popupAnchor: [0, -32]
+      });
+    }
+
+    const marcadoresPorId = {};
+    let parqueaderoSeleccionado = null;
+    let coordsUsuario = null;
+    let marcadorUsuario = null;
+    let lineaRuta = null;
+    let duracionBaseSegundos = null;
+    let distanciaBaseMetros = null;
+
+    const panelTituloEl = document.getElementById("panel-titulo");
+    const panelSubtituloEl = document.getElementById("panel-subtitulo");
+    const detalleContenedor = document.getElementById("detalle-parqueadero");
+    const infoRutaBox = document.getElementById("info-ruta-box");
+    const rutaTiempoEl = document.getElementById("ruta-tiempo");
+    const rutaDistanciaEl = document.getElementById("ruta-distancia");
+    const vehiculoSelect = document.getElementById("vehiculo_registrado_select");
+    const otraHoraCheck = document.getElementById("otra_hora_llegada");
+    const bloqueHoraLlegada = document.getElementById("bloque-hora-llegada");
+    const horaLlegadaInput = document.getElementById("hora_llegada_aprox");
+    const duracionReservaEl = document.getElementById("duracion_reserva");
+    const totalEstimadoEl = document.getElementById("total-estimado-reserva");
+    const avisoDisponibilidadTipoEl = document.getElementById("aviso-disponibilidad-tipo");
+    const btnConfirmarReserva = document.getElementById("btn-confirmar-reserva");
+    const seccionReserva = document.getElementById("seccion-reserva");
+    const inputParqueaderoId = document.getElementById("parqueadero_id_input");
+    const listaContenedor = document.getElementById("lista-parqueaderos");
+
+    function setAvisoTipo(mensaje) {
+      if (!avisoDisponibilidadTipoEl) return;
+      if (mensaje) {
+        avisoDisponibilidadTipoEl.textContent = mensaje;
+        avisoDisponibilidadTipoEl.classList.remove("oculto");
+      } else {
+        avisoDisponibilidadTipoEl.textContent = "";
+        avisoDisponibilidadTipoEl.classList.add("oculto");
+      }
+    }
+
+    function obtenerTipoVehiculoActivo() {
+      if (!vehiculoSelect || !vehiculoSelect.selectedOptions.length) {
+        return "CARRO";
+      }
+      return vehiculoSelect.selectedOptions[0].dataset.tipo || "CARRO";
+    }
+
+    function obtenerTarifaVehiculoActual() {
+      if (!parqueaderoSeleccionado) return null;
+      const vehiculo = obtenerTipoVehiculoActivo();
+      const tarifasPorTipo = parqueaderoSeleccionado.tarifas_por_tipo || {};
+      return tarifasPorTipo[vehiculo] || null;
+    }
+
+    function toggleHoraLlegada() {
+      if (!otraHoraCheck || !bloqueHoraLlegada) return;
+      const activa = otraHoraCheck.checked;
+      bloqueHoraLlegada.classList.toggle("oculto", !activa);
+      if (horaLlegadaInput) {
+        horaLlegadaInput.required = activa;
+        if (!activa) horaLlegadaInput.value = "";
+      }
+    }
+
+    function recalcularTiempoPorVehiculo() {
+      if (duracionBaseSegundos === null) return;
+
+      const vehiculo = obtenerTipoVehiculoActivo();
+      let minutosCalculados;
+
+      if (vehiculo === "BICICLETA") {
+        const km = (distanciaBaseMetros || 0) / 1000;
+        minutosCalculados = Math.max(1, Math.round((km / 16) * 60));
+      } else if (vehiculo === "MOTO") {
+        minutosCalculados = Math.max(1, Math.round((duracionBaseSegundos / 60) * 0.82));
+      } else {
+        minutosCalculados = Math.max(1, Math.round(duracionBaseSegundos / 60));
+      }
+
+      rutaTiempoEl.textContent = `${minutosCalculados} min`;
+      if (distanciaBaseMetros !== null) {
+        rutaDistanciaEl.textContent = distanciaBaseMetros < 1000
+          ? `${Math.round(distanciaBaseMetros)} m`
+          : `${(distanciaBaseMetros / 1000).toFixed(1)} km`;
+      }
+    }
+
+    function formatearPesos(valor) {
+      const num = Number(valor) || 0;
+      return "$" + num.toLocaleString("es-CO");
+    }
+
+    function actualizarTarifaVisible() {
+      const tarifaEl = document.getElementById("detalle-tarifa-hora");
+      if (!tarifaEl || !parqueaderoSeleccionado) return;
+
+      const tarifa = obtenerTarifaVehiculoActual();
+      if (!tarifa) {
+        tarifaEl.textContent = "No habilitado";
+        return;
+      }
+
+      if (tarifa.minuto > 0) {
+        tarifaEl.textContent = formatearPesos(tarifa.minuto) + " / min";
+      } else if (tarifa.hora > 0) {
+        tarifaEl.textContent = formatearPesos(tarifa.hora) + " / hora";
+      } else if (tarifa.dia > 0) {
+        tarifaEl.textContent = formatearPesos(tarifa.dia) + " / día";
+      } else {
+        tarifaEl.textContent = "No habilitado";
+      }
+    }
+
+    function actualizarEstimadoReserva() {
+      if (!parqueaderoSeleccionado || !duracionReservaEl || !totalEstimadoEl) return;
+
+      const tipoVehiculo = obtenerTipoVehiculoActivo();
+      const cuposPorTipo = parqueaderoSeleccionado.cupos_por_tipo || {};
+
+      if (Object.prototype.hasOwnProperty.call(cuposPorTipo, tipoVehiculo)) {
+        if (Number(cuposPorTipo[tipoVehiculo]) <= 0) {
+          totalEstimadoEl.textContent = "Sin cupos disponibles";
+          setAvisoTipo(
+            "No hay cupos disponibles para este tipo de vehículo en este parqueadero."
+          );
+          if (btnConfirmarReserva) btnConfirmarReserva.disabled = true;
+          return;
+        }
+      }
+
+      const tarifa = obtenerTarifaVehiculoActual();
+      if (!tarifa) {
+        totalEstimadoEl.textContent = "No habilitado";
+        setAvisoTipo(
+          "No se habilita reserva para este tipo de vehículo en este parqueadero."
+        );
+        if (btnConfirmarReserva) btnConfirmarReserva.disabled = true;
+        return;
+      }
+
+      const tramo = duracionReservaEl.value;
+      const minuto = Number(tarifa.minuto) || 0;
+      const hora = Number(tarifa.hora) || 0;
+      const dia = Number(tarifa.dia) || 0;
+      let total = null;
+
+      if (tramo === "min_30") {
+        if (minuto > 0) total = minuto * 30;
+        else if (hora > 0) total = hora * 0.5;
+      } else if (tramo === "hora_1") {
+        if (hora > 0) total = hora;
+        else if (minuto > 0) total = minuto * 60;
+      } else if (tramo === "hora_2") {
+        if (hora > 0) total = hora * 2;
+        else if (minuto > 0) total = minuto * 120;
+      } else if (tramo === "dia_1") {
+        if (dia > 0) total = dia;
+      } else if (tramo === "dia_2") {
+        if (dia > 0) total = dia * 2;
+      } else if (tramo === "dia_3") {
+        if (dia > 0) total = dia * 3;
+      }
+
+      if (total === null || total <= 0) {
+        totalEstimadoEl.textContent = "No habilitado";
+        setAvisoTipo(
+          "Este tiempo de estadía no está habilitado para este tipo de vehículo."
+        );
+        if (btnConfirmarReserva) btnConfirmarReserva.disabled = true;
+        return;
+      }
+
+      setAvisoTipo(null);
+      if (btnConfirmarReserva) btnConfirmarReserva.disabled = false;
+      totalEstimadoEl.textContent = formatearPesos(total);
+    }
+
+    function onCambioVehiculoRegistrado() {
+      recalcularTiempoPorVehiculo();
+      actualizarTarifaVisible();
+      actualizarEstimadoReserva();
+    }
+
+    async function calcularYTrazarRuta(destino, ajustarZoom = true) {
+      if (!coordsUsuario) {
+        rutaTiempoEl.textContent = "Activa GPS";
+        rutaDistanciaEl.textContent = "--";
+        return;
+      }
+
+      const url = `https://router.project-osrm.org/route/v1/driving/${coordsUsuario.lng},${coordsUsuario.lat};${destino.lng},${destino.lat}?overview=full&geometries=geojson`;
+
+      try {
+        const resp = await fetch(url);
+        const data = await resp.json();
+
+        if (data.code === "Ok" && data.routes && data.routes.length > 0) {
+          const ruta = data.routes[0];
+          duracionBaseSegundos = ruta.duration;
+          distanciaBaseMetros = ruta.distance;
+
+          recalcularTiempoPorVehiculo();
+
+          if (lineaRuta) {
+            map.removeLayer(lineaRuta);
+          }
+
+          lineaRuta = L.geoJSON(ruta.geometry, {
+            style: {
+              color: "#7c3aed",
+              weight: 5,
+              opacity: 0.85
+            }
+          }).addTo(map);
+
+          if (ajustarZoom) {
+            map.fitBounds(lineaRuta.getBounds(), { padding: [45, 45] });
+          }
+        }
+      } catch (e) {
+        console.error("Error trazando ruta OSRM:", e);
+        rutaTiempoEl.textContent = "No disponible";
+      }
+    }
+
+    function trazarRutaSeleccionada() {
+      if (!parqueaderoSeleccionado) return;
+      if (!coordsUsuario) {
+        ubicarUsuario(false, () => calcularYTrazarRuta(parqueaderoSeleccionado, true));
+        return;
+      }
+      calcularYTrazarRuta(parqueaderoSeleccionado, true);
+    }
+
+    function seleccionarParqueadero(p, centrarMapa = true) {
+      parqueaderoSeleccionado = p;
+      const estado = obtenerEstadoOcupacion(p);
+
+      if (panelTituloEl) {
+        panelTituloEl.textContent = "Detalle del parqueadero";
+      }
+      if (panelSubtituloEl) {
+        panelSubtituloEl.textContent = "Revisa disponibilidad, tiempo de llegada y reserva tu cupo.";
+      }
+
+      if (centrarMapa && !coordsUsuario) {
+        map.setView([p.lat, p.lng], 16);
+      }
+
+      if (marcadoresPorId[p.id]) {
+        marcadoresPorId[p.id].openPopup();
+      }
+
+      detalleContenedor.innerHTML = `
+        <span class="tag-estado ${estado.tagClase}">
+          <i class="fa-solid fa-circle"></i> ${estado.texto}
+        </span>
+        <h4 class="detalle-nombre">${p.nombre}</h4>
+        <p class="detalle-direccion"><i class="fa-solid fa-location-dot"></i> ${p.direccion}</p>
+
+        <div class="datos-grid">
+          <div class="dato-caja">
+            <small>Tarifa base</small>
+            <strong id="detalle-tarifa-hora">${p.tarifa}</strong>
+          </div>
+          <div class="dato-caja">
+            <small>Capacidad</small>
+            <strong>${p.capacidad_total} espacios</strong>
+          </div>
+        </div>
+
+        <p class="detalle-tel"><i class="fa-solid fa-phone"></i> ${p.telefono}</p>
+      `;
+
+      if (inputParqueaderoId) {
+        inputParqueaderoId.value = p.id;
+      }
+      infoRutaBox.classList.remove("oculto");
+      seccionReserva.classList.remove("oculto");
+      actualizarTarifaVisible();
+      actualizarEstimadoReserva();
+
+      document.querySelectorAll(".item-parqueadero").forEach((el) => {
+        el.classList.toggle("activo", Number(el.dataset.id) === p.id);
+      });
+
+      if (coordsUsuario) {
+        calcularYTrazarRuta(p, centrarMapa);
+      } else {
+        rutaTiempoEl.textContent = "Activa GPS";
+        rutaDistanciaEl.textContent = "--";
+      }
+    }
+
+    if (parqueaderos.length === 0) {
+      listaContenedor.innerHTML = `
+        <p class="texto-muted">Aún no hay parqueaderos con latitud y longitud registrados.</p>
+      `;
+    } else {
+      parqueaderos.forEach((p) => {
+        const estado = obtenerEstadoOcupacion(p);
+        const marker = L.marker([p.lat, p.lng], { icon: crearPinNexopark(estado.clase) }).addTo(map);
+
+        marker.bindPopup(`
+          <strong>${p.nombre}</strong><br>
+          <span>${p.direccion}</span><br>
+          <span>${estado.texto}</span>
+        `);
+
+        marker.on("click", () => {
+          seleccionarParqueadero(p, true);
+        });
+
+        marcadoresPorId[p.id] = marker;
+
+        const item = document.createElement("button");
+        item.type = "button";
+        item.className = "item-parqueadero";
+        item.dataset.id = p.id;
+        item.innerHTML = `
+          <div>
+            <strong><span class="punto-estado ${estado.clase}"></span> ${p.nombre}</strong>
+            <small>${p.direccion}</small>
+          </div>
+          <span class="item-tarifa">${estado.texto}</span>
+        `;
+        item.addEventListener("click", () => seleccionarParqueadero(p, true));
+        listaContenedor.appendChild(item);
+      });
+    }
+
+    function ubicarUsuario(silenciosoEnCarga = false, alTerminar = null) {
+      if (!navigator.geolocation) {
+        if (!silenciosoEnCarga) alert("Tu navegador no soporta geolocalización.");
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          coordsUsuario = {
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude
+          };
+
+          if (marcadorUsuario) {
+            map.removeLayer(marcadorUsuario);
+          }
+
+          marcadorUsuario = L.circleMarker([coordsUsuario.lat, coordsUsuario.lng], {
+            radius: 9,
+            fillColor: "#3b82f6",
+            color: "#ffffff",
+            weight: 2.5,
+            fillOpacity: 1
+          })
+            .addTo(map)
+            .bindPopup("<b>Tu ubicación</b>")
+            .openPopup();
+
+          if (parqueaderoSeleccionado) {
+            calcularYTrazarRuta(parqueaderoSeleccionado, true);
+          } else {
+            map.setView([coordsUsuario.lat, coordsUsuario.lng], 15);
+          }
+
+          if (alTerminar) alTerminar();
+        },
+        (err) => {
+          console.error("Error geolocalización:", err.code, err.message);
+          if (!silenciosoEnCarga) {
+            alert("No se pudo obtener tu ubicación. Revisa los permisos del navegador y de Windows.");
+          }
+        },
+        {
+          enableHighAccuracy: false,
+          timeout: 10000,
+          maximumAge: 60000
+        }
+      );
+    }
+
+    window.addEventListener("DOMContentLoaded", () => {
+      ubicarUsuario(true);
+    });
+  </script>
+{% endblock %}

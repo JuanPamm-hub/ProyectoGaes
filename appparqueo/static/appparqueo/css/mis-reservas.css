@@ -1,0 +1,339 @@
+:root {
+  --bg-dark: #090910;
+  --bg-panel: #11111b;
+  --bg-card: #161624;
+  --bg-input: #0d0d16;
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+  --accent-purple: #7c3aed;
+  --accent-purple-hover: #6d28d9;
+  --accent-blue: #2563eb;
+  --border-subtle: rgba(255, 255, 255, 0.09);
+  --radius: 10px;
+}
+
+.reservas-page {
+  max-width: 1260px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 28px 24px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.reservas-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.reservas-header h1 {
+  font-size: clamp(1.45rem, 2.4vw, 1.9rem);
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+.reservas-header p {
+  color: var(--text-muted);
+  font-size: 0.92rem;
+}
+
+.reservas-header .highlight {
+  color: #a78bfa;
+}
+
+.btn-nueva-reserva {
+  padding: 10px 16px;
+  border-radius: var(--radius);
+  background-color: var(--accent-purple);
+  color: #ffffff;
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.btn-nueva-reserva:hover {
+  background-color: var(--accent-purple-hover);
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+
+.stat-card {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stat-card.destacada {
+  border-color: rgba(167, 139, 250, 0.28);
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.22) 0%, rgba(37, 99, 235, 0.14) 100%);
+}
+
+.stat-label {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.stat-value {
+  font-size: 1.45rem;
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+.stat-sub {
+  font-size: 0.76rem;
+  color: #a78bfa;
+}
+
+.reservas-grid {
+  display: grid;
+  grid-template-columns: 1.45fr 1fr;
+  gap: 18px;
+  align-items: start;
+}
+
+.panel-box {
+  background-color: var(--bg-panel);
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  padding: 20px;
+}
+
+.panel-box-header {
+  margin-bottom: 16px;
+}
+
+.panel-box-header h2 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.panel-box-header p {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.tabla-wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.tabla-reservas {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.tabla-reservas th,
+.tabla-reservas td {
+  padding: 11px 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.tabla-reservas th {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  background-color: var(--bg-card);
+}
+
+.tabla-reservas tbody tr.fila-activa {
+  background-color: rgba(124, 58, 237, 0.12);
+}
+
+.tabla-reservas tbody tr:hover {
+  background-color: rgba(124, 58, 237, 0.08);
+}
+
+.estado-badge {
+  display: inline-block;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.estado-activa {
+  background-color: rgba(34, 197, 94, 0.16);
+  color: #86efac;
+}
+
+.estado-no-llego {
+  background-color: rgba(245, 158, 11, 0.18);
+  color: #fcd34d;
+}
+
+.estado-finalizada {
+  background-color: rgba(59, 130, 246, 0.18);
+  color: #93c5fd;
+}
+
+.estado-cancelada {
+  background-color: rgba(239, 68, 68, 0.16);
+  color: #fca5a5;
+}
+
+.btn-ver-detalle {
+  padding: 5px 10px;
+  border-radius: 7px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-decoration: none;
+  border: 1px solid rgba(167, 139, 250, 0.35);
+  background-color: var(--bg-card);
+  color: #ddd6fe;
+}
+
+.btn-ver-detalle:hover {
+  background-color: rgba(124, 58, 237, 0.22);
+}
+
+.detalle-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.detalle-fila {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  font-size: 0.87rem;
+}
+
+.detalle-fila span {
+  color: var(--text-muted);
+}
+
+.factura-card {
+  padding: 14px;
+  border-radius: 10px;
+  background-color: var(--bg-input);
+  border: 1px solid rgba(167, 139, 250, 0.28);
+  margin-bottom: 16px;
+}
+
+.factura-card h3 {
+  font-size: 0.95rem;
+  color: #c4b5fd;
+  margin-bottom: 8px;
+}
+
+.factura-card p {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin: 3px 0;
+}
+
+.factura-total {
+  font-size: 1.05rem !important;
+  font-weight: 800;
+  color: var(--text-main) !important;
+  margin-top: 8px !important;
+}
+
+.acciones-detalle {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.btn-descargar-factura {
+  display: block;
+  width: 100%;
+  text-align: center;
+  padding: 11px 14px;
+  border-radius: var(--radius);
+  background-color: var(--accent-purple);
+  color: #ffffff;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.btn-descargar-factura:hover {
+  background-color: var(--accent-purple-hover);
+}
+
+.btn-eliminar-reserva {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  border: 1px solid rgba(248, 113, 113, 0.4);
+  background-color: var(--bg-card);
+  color: #fca5a5;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-eliminar-reserva:hover {
+  background-color: rgba(239, 68, 68, 0.16);
+}
+
+.mensajes-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mensaje-alerta {
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  font-size: 0.88rem;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+}
+
+.mensaje-alerta.error {
+  border-color: rgba(248, 113, 113, 0.5);
+  color: #fca5a5;
+}
+
+.mensaje-alerta.success {
+  border-color: rgba(167, 139, 250, 0.5);
+  color: #ddd6fe;
+}
+
+.estado-sin-datos {
+  padding: 28px 16px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.92rem;
+}
+
+@media (max-width: 960px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .reservas-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 520px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+}

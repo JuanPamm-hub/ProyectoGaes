@@ -1,0 +1,197 @@
+{% extends 'appparqueo/base.html' %}
+{% load static %}
+
+{% block title %}Mis reservas | NEXOPARK{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'appparqueo/css/mis-reservas.css' %}">
+{% endblock %}
+
+{% block content %}
+<section class="reservas-page">
+  <div class="reservas-header">
+    <div>
+      <h1>Mis <span class="highlight">reservas</span></h1>
+      <p>Consulta tu historial ordenado, revisa tu última reserva activa y descarga tu factura.</p>
+    </div>
+
+    <a href="{% url 'buscar_parqueadero' %}" class="btn-nueva-reserva">+ Nueva reserva</a>
+  </div>
+
+  {% if messages %}
+    <div class="mensajes-lista">
+      {% for message in messages %}
+        <div class="mensaje-alerta {{ message.tags }}">{{ message }}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <!-- Tarjetas resumen -->
+  <div class="stats-grid">
+    <div class="stat-card destacada">
+      <span class="stat-label">Última reserva activa</span>
+      {% if ultima_activa %}
+        <span class="stat-value">#{{ ultima_activa.obj.id }} · {{ ultima_activa.obj.vehiculo.placa }}</span>
+        <span class="stat-sub">{{ ultima_activa.obj.parqueadero.nombre }}</span>
+      {% else %}
+        <span class="stat-value">Ninguna</span>
+        <span class="stat-sub">Sin reserva activa</span>
+      {% endif %}
+    </div>
+
+    <div class="stat-card">
+      <span class="stat-label">Total de reservas</span>
+      <span class="stat-value">{{ total_reservas }}</span>
+      <span class="stat-sub">Historial completo</span>
+    </div>
+
+    <div class="stat-card">
+      <span class="stat-label">Finalizadas</span>
+      <span class="stat-value">{{ total_finalizadas }}</span>
+      <span class="stat-sub">Completadas</span>
+    </div>
+
+    <div class="stat-card">
+      <span class="stat-label">No llegó / Vencidas</span>
+      <span class="stat-value">{{ total_no_llego }}</span>
+      <span class="stat-sub">Sin ingreso a tiempo</span>
+    </div>
+  </div>
+
+  <div class="reservas-grid">
+    <!-- Listado ordenado -->
+    <div class="panel-box">
+      <div class="panel-box-header">
+        <h2>Historial de reservas</h2>
+        <p>Ordenadas de la más reciente a la más antigua. Selecciona una para ver su factura.</p>
+      </div>
+
+      {% if reservas %}
+        <div class="tabla-wrapper">
+          <table class="tabla-reservas">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Parqueadero</th>
+                <th>Vehículo</th>
+                <th>Inicio</th>
+                <th>Estado</th>
+                <th>Acción</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in reservas %}
+                <tr class="{% if reserva_seleccionada and reserva_seleccionada.obj.id == item.obj.id %}fila-activa{% endif %}">
+                  <td>#{{ item.obj.id }}</td>
+                  <td>{{ item.obj.parqueadero.nombre }}</td>
+                  <td>{{ item.obj.vehiculo.placa }}</td>
+                  <td>{{ item.obj.fecha_inicio|date:"d/m/Y H:i" }}</td>
+                  <td>
+                    {% if item.no_llego %}
+                      <span class="estado-badge estado-no-llego">No llegó</span>
+                    {% elif item.obj.estado == 'ACTIVA' %}
+                      <span class="estado-badge estado-activa">Activa</span>
+                    {% elif item.obj.estado == 'FINALIZADA' %}
+                      <span class="estado-badge estado-finalizada">Finalizada</span>
+                    {% else %}
+                      <span class="estado-badge estado-cancelada">Cancelada</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <a href="?detalle={{ item.obj.id }}" class="btn-ver-detalle">Ver detalle</a>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="estado-sin-datos">
+          Aún no has realizado ninguna reserva. Haz clic en <strong>+ Nueva reserva</strong> para buscar un parqueadero.
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- Detalle, factura, descarga y eliminación -->
+    <div class="panel-box">
+      <div class="panel-box-header">
+        <h2>Detalle y factura</h2>
+        <p>Información completa de la reserva seleccionada.</p>
+      </div>
+
+      {% if reserva_seleccionada %}
+        <div class="detalle-lista">
+          <div class="detalle-fila">
+            <span>Reserva</span>
+            <strong>#{{ reserva_seleccionada.obj.id }}</strong>
+          </div>
+          <div class="detalle-fila">
+            <span>Parqueadero</span>
+            <strong>{{ reserva_seleccionada.obj.parqueadero.nombre }}</strong>
+          </div>
+          <div class="detalle-fila">
+            <span>Vehículo</span>
+            <strong>{{ reserva_seleccionada.obj.vehiculo.placa }} ({{ reserva_seleccionada.obj.vehiculo.get_tipo_display }})</strong>
+          </div>
+          <div class="detalle-fila">
+            <span>Fecha creación</span>
+            <strong>{{ reserva_seleccionada.obj.fecha_reserva|date:"d/m/Y H:i" }}</strong>
+          </div>
+          <div class="detalle-fila">
+            <span>Inicio</span>
+            <strong>{{ reserva_seleccionada.obj.fecha_inicio|date:"d/m/Y H:i" }}</strong>
+          </div>
+          <div class="detalle-fila">
+            <span>Fin estimado</span>
+            <strong>{% if reserva_seleccionada.obj.fecha_fin %}{{ reserva_seleccionada.obj.fecha_fin|date:"d/m/Y H:i" }}{% else %}—{% endif %}</strong>
+          </div>
+          <div class="detalle-fila">
+            <span>Estado</span>
+            <strong>
+              {% if reserva_seleccionada.no_llego %}
+                No llegó (vencida)
+              {% else %}
+                {{ reserva_seleccionada.obj.get_estado_display }}
+              {% endif %}
+            </strong>
+          </div>
+        </div>
+
+        <div class="factura-card">
+          <h3>Factura / Resumen de cobro</h3>
+          {% if reserva_seleccionada.factura %}
+            <p>N.° Factura: <strong>{{ reserva_seleccionada.factura.numero_factura }}</strong></p>
+            <p>Subtotal: ${{ reserva_seleccionada.factura.subtotal|floatformat:0 }}</p>
+            <p>Impuesto: ${{ reserva_seleccionada.factura.impuesto|floatformat:0 }}</p>
+            <p class="factura-total">Total facturado: ${{ reserva_seleccionada.factura.total|floatformat:0 }}</p>
+          {% else %}
+            <p>Estado de pago: <strong>{% if reserva_seleccionada.pago %}{{ reserva_seleccionada.pago.get_estado_display }}{% else %}Pendiente de facturación{% endif %}</strong></p>
+            <p class="factura-total">Total estimado: ${{ reserva_seleccionada.monto_mostrado|floatformat:0 }}</p>
+          {% endif %}
+        </div>
+
+        <div class="acciones-detalle">
+          <a href="{% url 'descargar_factura_reserva' reserva_seleccionada.obj.id %}" class="btn-descargar-factura">
+            Descargar factura
+          </a>
+
+          <form
+            action="{% url 'eliminar_reserva' reserva_seleccionada.obj.id %}"
+            method="POST"
+            onsubmit="return confirm('¿Seguro que deseas eliminar la reserva #{{ reserva_seleccionada.obj.id }}?');"
+          >
+            {% csrf_token %}
+            <button type="submit" class="btn-eliminar-reserva">
+              Eliminar reserva
+            </button>
+          </form>
+        </div>
+      {% else %}
+        <div class="estado-sin-datos">
+          Selecciona una reserva de la tabla para ver su detalle y factura.
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</section>
+{% endblock %}
