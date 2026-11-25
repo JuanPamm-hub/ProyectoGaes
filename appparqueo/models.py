@@ -49,8 +49,8 @@ class Parqueadero(models.Model):
     direccion = models.CharField(max_length=150)
     telefono = models.CharField(max_length=20, blank=True)
     capacidad_total = models.PositiveIntegerField(validators=[MinValueValidator(1)])
-    latitud = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
-    longitud = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    latitud = models.DecimalField(max_digits=20, decimal_places=16, null=True, blank=True)
+    longitud = models.DecimalField(max_digits=20, decimal_places=16, null=True, blank=True)
 
     administrador = models.ForeignKey(
         Administrador, on_delete=models.PROTECT, related_name="parqueaderos"

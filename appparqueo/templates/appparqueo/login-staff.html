@@ -1,97 +1,116 @@
-{% extends 'appparqueo/base.html' %}
 {% load static %}
-
-{% block title %}Acceso personal | NEXOPARK{% endblock %}
-
-{% block extra_css %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Acceso personal | NEXOPARK</title>
   <link rel="stylesheet" href="{% static 'appparqueo/css/registrarse.css' %}">
-{% endblock %}
+</head>
+<body>
 
-{% block content %}
-<div class="auth-layout">
-  <section class="brand-panel">
-    <div class="brand-header">
-      <a href="{% url 'inicio' %}" class="brand-logo">
-        <span class="logo-icon">N</span>
-        <span class="logo-text">NEXOPARK</span>
-      </a>
-    </div>
+  <main class="auth-layout">
 
-    <div class="visual-showcase">
-      <div class="showcase-card main-card">
-        <span class="badge-pill">PORTAL OPERATIVO · PERSONAL</span>
-        <div class="big-p-box">P</div>
-        <p class="card-caption">
-          Inicio de sesión exclusivo para administradores y empleados autorizados del sistema.
+    <!-- COLUMNA IZQUIERDA: Marca NEXOPARK, tarjetas visuales y mensaje -->
+    <section class="brand-panel" aria-label="Presentación de NEXOPARK Personal">
+      <header class="brand-header">
+        <a href="{% url 'inicio' %}" class="brand-logo" aria-label="Inicio NEXOPARK">
+          <span class="logo-icon">P</span>
+          <span class="logo-text">NEXOPARK</span>
+        </a>
+      </header>
+
+      <div class="visual-showcase">
+        <div class="showcase-card main-card">
+          <span class="badge-pill">PORTAL OPERATIVO · PERSONAL</span>
+          <div class="big-p-box">P</div>
+          <p class="card-caption">
+            Inicio de sesión exclusivo para administradores y empleados autorizados del sistema.
+          </p>
+        </div>
+
+        <div class="mini-cards-row">
+          <div class="mini-card">
+            <span class="mini-title">Administradores</span>
+            <span class="mini-desc">Parqueaderos, tarifas y espacios</span>
+          </div>
+          <div class="mini-card">
+            <span class="mini-title">Empleados</span>
+            <span class="mini-desc">Supervisión de reservas y caja</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="brand-copy">
+        <h1>Acceso exclusivo para <span class="highlight">personal.</span></h1>
+        <p>Ingresa con tu correo y contraseña registrados en el sistema.</p>
+      </div>
+    </section>
+
+    <!-- COLUMNA DERECHA: Formulario de inicio de sesión personal -->
+    <aside class="form-panel" aria-label="Formulario de acceso personal">
+      <div class="form-box">
+        <h2>Iniciar sesión personal</h2>
+        <p class="form-subtitle">Solo para cuentas de administrador o empleado.</p>
+
+        {% if error_mensaje %}
+          <div style="color: #fca5a5; background: rgba(239, 68, 68, 0.14); border: 1px solid rgba(248, 113, 113, 0.45); padding: 10px 12px; border-radius: 10px; font-size: 0.86rem; margin-bottom: 14px;">
+            <p>{{ error_mensaje }}</p>
+          </div>
+        {% endif %}
+
+        <form method="POST" class="register-form">
+          {% csrf_token %}
+
+          <div class="form-group">
+            <label for="id_staff_correo">Correo institucional / personal</label>
+            <input
+              type="email"
+              id="id_staff_correo"
+              name="correo"
+              placeholder="personal@nexopark.com"
+              required
+            >
+          </div>
+
+          <div class="form-group">
+            <label for="id_staff_password">Contraseña</label>
+            <input
+              type="password"
+              id="id_staff_password"
+              name="contrasena"
+              placeholder="Ingresa tu contraseña"
+              required
+            >
+          </div>
+
+          <button type="submit" class="btn-primary">Ingresar al panel</button>
+        </form>
+
+        <hr class="form-divider">
+
+        <p class="secondary-action">
+          ¿Eres cliente?
+          <a href="{% url 'iniciar_sesion' %}" class="btn-secondary">Volver al login de clientes</a>
         </p>
+
+        <footer class="panel-footer">
+          <span>NEXOPARK · Acceso restringido a administradores y empleados</span>
+        </footer>
       </div>
+    </aside>
 
-      <div class="mini-cards-row">
-        <div class="mini-card">
-          <span class="mini-title">Administradores</span>
-          <span class="mini-desc">Parqueaderos, tarifas y espacios</span>
-        </div>
-        <div class="mini-card">
-          <span class="mini-title">Empleados</span>
-          <span class="mini-desc">Supervisión de reservas y caja</span>
-        </div>
-      </div>
-    </div>
+  </main>
 
-    <div class="brand-copy">
-      <h1>Acceso exclusivo para <span class="highlight">personal</span></h1>
-      <p>Ingresa con tu correo y contraseña registrados en el sistema.</p>
-    </div>
-  </section>
+  <!-- Pie de página inferior igual al de registrarse -->
+  <footer class="page-footer">
+    <nav aria-label="Enlaces de NEXOPARK">
+      <a href="{% url 'inicio' %}">Inicio</a>
+      <a href="#">Servicios</a>
+      <a href="#">Términos</a>
+      <a href="#">Privacidad</a>
+    </nav>
+  </footer>
 
-  <section class="form-panel">
-    <div class="form-box">
-      <h2>Iniciar sesión personal</h2>
-      <p class="form-subtitle">Solo para cuentas de administrador o empleado.</p>
-
-      {% if error_mensaje %}
-        <p style="color: #fca5a5; background: rgba(239, 68, 68, 0.14); border: 1px solid rgba(248, 113, 113, 0.45); padding: 10px 12px; border-radius: 10px; font-size: 0.86rem; margin-bottom: 14px;">
-          {{ error_mensaje }}
-        </p>
-      {% endif %}
-
-      <form method="POST" class="register-form">
-        {% csrf_token %}
-
-        <div class="form-group">
-          <label for="id_staff_correo">Correo institucional / personal</label>
-          <input
-            type="email"
-            id="id_staff_correo"
-            name="correo"
-            placeholder="personal@nexopark.com"
-            required
-          >
-        </div>
-
-        <div class="form-group">
-          <label for="id_staff_password">Contraseña</label>
-          <input
-            type="password"
-            id="id_staff_password"
-            name="contrasena"
-            placeholder="Ingresa tu contraseña"
-            required
-          >
-        </div>
-
-        <button type="submit" class="btn-primary">Ingresar al panel</button>
-      </form>
-
-      <hr class="form-divider">
-
-      <div class="secondary-action">
-        ¿Eres cliente?
-        <a href="{% url 'iniciar_sesion' %}" class="btn-secondary">Volver al login de clientes</a>
-      </div>
-
-      <p class="panel-footer">NEXOPARK · Acceso restringido a administradores y empleados</p>
-    </div>
-  </section>
-</div>
-{% endblock %}
+</body>
+</html>

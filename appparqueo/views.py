@@ -815,17 +815,62 @@ def login_staff(request):
     )
 
 
-def panel_admin(request):
+def cerrar_sesion_staff(request):
+    request.session.flush()
+    return redirect("login_staff")
+
+
+def _obtener_staff_y_parqueaderos(request):
     staff_id = request.session.get("staff_id")
     rol_personal = request.session.get("staff_rol")
 
     if not request.session.get("es_staff") or not staff_id:
-        return redirect("login_staff")
+        return None, None, Parqueadero.objects.none()
 
     if rol_personal == "EMPLEADO":
-        usuario_staff = get_object_or_404(Empleado, id=staff_id)
+        usuario = Empleado.objects.select_related("parqueadero").filter(id=staff_id, activo=True).first()
+        parqueaderos = Parqueadero.objects.filter(id=usuario.parqueadero_id) if usuario else Parqueadero.objects.none()
     else:
-        usuario_staff = get_object_or_404(Administrador, id=staff_id)
+        usuario = Administrador.objects.filter(id=staff_id, activo=True).first()
+        parqueaderos = Parqueadero.objects.filter(administrador=usuario) if usuario else Parqueadero.objects.none()
+
+    return usuario, rol_personal, parqueaderos
+
+
+def panel_admin(request):
+    usuario_staff, rol_personal, parqueaderos_qs = _obtener_staff_y_parqueaderos(request)
+    if not usuario_staff:
+        return redirect("login_staff")
+
+    parqueadero_id = request.GET.get("parqueadero")
+    if parqueadero_id and parqueadero_id.isdigit():
+        parqueadero_actual = parqueaderos_qs.filter(id=int(parqueadero_id)).first() or parqueaderos_qs.first()
+    else:
+        parqueadero_actual = parqueaderos_qs.first()
+
+    espacios = Espacio.objects.none()
+    reservas_activas = []
+    empleados = Empleado.objects.none()
+    tarifas = Tarifa.objects.none()
+
+    if parqueadero_actual:
+        espacios = Espacio.objects.filter(parqueadero=parqueadero_actual).order_by("numero")
+        ahora = timezone.now()
+        reservas_qs = (
+            Reserva.objects.filter(parqueadero=parqueadero_actual, estado=Reserva.Estado.ACTIVA)
+            .select_related("cliente", "vehiculo", "tarifa")
+            .order_by("fecha_inicio")
+        )
+        for r in reservas_qs:
+            calculo = calcular_monto_actual_reserva(r, ahora)
+            reservas_activas.append({
+                "obj": r,
+                "calculo": calculo,
+            })
+
+        if rol_personal == "ADMIN":
+            empleados = Empleado.objects.filter(parqueadero=parqueadero_actual).order_by("-activo", "nombre")
+            tarifas = Tarifa.objects.filter(parqueadero=parqueadero_actual).order_by("tipo_vehiculo")
 
     return render(
         request,
@@ -833,9 +878,349 @@ def panel_admin(request):
         {
             "admin": usuario_staff,
             "rol_personal": rol_personal,
-            "total_parqueaderos": Parqueadero.objects.count(),
-            "total_reservas": Reserva.objects.count(),
-            "total_vehiculos": Vehiculo.objects.count(),
-            "total_clientes": Cliente.objects.count(),
+            "parqueaderos": parqueaderos_qs,
+            "parqueadero_actual": parqueadero_actual,
+            "espacios": espacios,
+            "total_disponibles": espacios.filter(estado=Espacio.Estado.DISPONIBLE).count(),
+            "total_ocupados": espacios.filter(estado=Espacio.Estado.OCUPADO).count(),
+            "total_mantenimiento": espacios.filter(estado=Espacio.Estado.MANTENIMIENTO).count(),
+            "reservas_activas": reservas_activas,
+            "empleados": empleados,
+            "tarifas": tarifas,
+            "tipos_vehiculo": Vehiculo.Tipo.choices,
+            "niveles_acceso": Empleado.NivelAcceso.choices,
         },
     )
+
+
+def cambiar_estado_espacio(request, espacio_id):
+    usuario_staff, rol_personal, parqueaderos_qs = _obtener_staff_y_parqueaderos(request)
+    if not usuario_staff:
+        return redirect("login_staff")
+
+    if request.method == "POST":
+        espacio = get_object_or_404(Espacio, id=espacio_id, parqueadero__in=parqueaderos_qs)
+        nuevo_estado = request.POST.get("estado", "").strip()
+        estados_validos = {choice[0] for choice in Espacio.Estado.choices}
+
+        if nuevo_estado in estados_validos:
+            espacio.estado = nuevo_estado
+            espacio.save(update_fields=["estado"])
+            messages.success(request, f"Espacio {espacio.numero} actualizado a {espacio.get_estado_display()}.")
+
+        return redirect(f"/personal/panel/?parqueadero={espacio.parqueadero_id}")
+
+    return redirect("panel_admin")
+
+
+def accion_reserva_staff(request, reserva_id):
+    usuario_staff, rol_personal, parqueaderos_qs = _obtener_staff_y_parqueaderos(request)
+    if not usuario_staff:
+        return redirect("login_staff")
+
+    if request.method == "POST":
+        reserva = get_object_or_404(
+            Reserva.objects.select_related("vehiculo", "parqueadero", "tarifa"),
+            id=reserva_id,
+            parqueadero__in=parqueaderos_qs,
+        )
+        accion = request.POST.get("accion")
+
+        with transaction.atomic():
+            if accion == "confirmar_llegada":
+                reserva.fecha_inicio = timezone.now()
+                reserva.save(update_fields=["fecha_inicio"])
+                messages.success(request, f"Llegada confirmada para la reserva #{reserva.id} ({reserva.vehiculo.placa}).")
+
+            elif accion == "finalizar":
+                ahora = timezone.now()
+                calculo = calcular_monto_actual_reserva(reserva, ahora)
+                reserva.fecha_fin = ahora
+                reserva.estado = Reserva.Estado.FINALIZADA
+                reserva.save(update_fields=["fecha_fin", "estado"])
+
+                espacio_ocupado = (
+                    Espacio.objects.select_for_update()
+                    .filter(
+                        parqueadero=reserva.parqueadero,
+                        tipo=reserva.vehiculo.tipo,
+                        estado=Espacio.Estado.OCUPADO,
+                    )
+                    .first()
+                )
+                if espacio_ocupado:
+                    espacio_ocupado.estado = Espacio.Estado.DISPONIBLE
+                    espacio_ocupado.save(update_fields=["estado"])
+
+                metodo = request.POST.get("metodo_pago", Pago.Metodo.EFECTIVO)
+                Pago.objects.update_or_create(
+                    reserva=reserva,
+                    defaults={
+                        "monto": calculo["monto_total"],
+                        "metodo_pago": metodo,
+                        "estado": Pago.Estado.PAGADO,
+                    },
+                )
+                messages.success(
+                    request,
+                    f"Reserva #{reserva.id} finalizada. Espacio liberado y pago registrado (${calculo['monto_total']:,.0f}).",
+                )
+
+            elif accion == "cancelar":
+                reserva.estado = Reserva.Estado.CANCELADA
+                reserva.save(update_fields=["estado"])
+
+                espacio_ocupado = (
+                    Espacio.objects.select_for_update()
+                    .filter(
+                        parqueadero=reserva.parqueadero,
+                        tipo=reserva.vehiculo.tipo,
+                        estado=Espacio.Estado.OCUPADO,
+                    )
+                    .first()
+                )
+                if espacio_ocupado:
+                    espacio_ocupado.estado = Espacio.Estado.DISPONIBLE
+                    espacio_ocupado.save(update_fields=["estado"])
+
+                messages.warning(request, f"Reserva #{reserva.id} cancelada y cupo liberado.")
+
+        return redirect(f"/personal/panel/?parqueadero={reserva.parqueadero_id}")
+
+    return redirect("panel_admin")
+
+
+def crear_empleado_staff(request):
+    usuario_staff, rol_personal, parqueaderos_qs = _obtener_staff_y_parqueaderos(request)
+    if not usuario_staff or rol_personal != "ADMIN":
+        return redirect("panel_admin")
+
+    if request.method == "POST":
+        parqueadero_id = request.POST.get("parqueadero_id")
+        parqueadero = get_object_or_404(parqueaderos_qs, id=parqueadero_id)
+
+        nombre = request.POST.get("nombre", "").strip()
+        apellido = request.POST.get("apellido", "").strip()
+        documento = request.POST.get("documento", "").strip()
+        cargo = request.POST.get("cargo", "").strip()
+        telefono = request.POST.get("telefono", "").strip()
+        correo = request.POST.get("correo", "").strip().lower()
+        contrasena = request.POST.get("contrasena", "").strip()
+        nivel_acceso = request.POST.get("nivel_acceso", Empleado.NivelAcceso.OPERADOR)
+
+        if not (nombre and apellido and documento and cargo and correo and contrasena):
+            messages.error(request, "Completa todos los campos obligatorios del empleado.")
+        elif Empleado.objects.filter(documento=documento).exists() or Empleado.objects.filter(correo__iexact=correo).exists():
+            messages.error(request, "Ya existe un empleado con ese documento o correo.")
+        else:
+            emp = Empleado(
+                nombre=nombre,
+                apellido=apellido,
+                documento=documento,
+                cargo=cargo,
+                telefono=telefono,
+                correo=correo,
+                nivel_acceso=nivel_acceso,
+                parqueadero=parqueadero,
+                activo=True,
+            )
+            emp.set_contrasena(contrasena)
+            emp.save()
+            messages.success(request, f"Empleado {nombre} {apellido} creado correctamente.")
+
+        return redirect(f"/personal/panel/?parqueadero={parqueadero.id}")
+
+    return redirect("panel_admin")
+
+
+def toggle_empleado_staff(request, empleado_id):
+    usuario_staff, rol_personal, parqueaderos_qs = _obtener_staff_y_parqueaderos(request)
+    if not usuario_staff or rol_personal != "ADMIN":
+        return redirect("panel_admin")
+
+    if request.method == "POST":
+        empleado = get_object_or_404(Empleado, id=empleado_id, parqueadero__in=parqueaderos_qs)
+        empleado.activo = not empleado.activo
+        empleado.save(update_fields=["activo"])
+        estado_txt = "activado" if empleado.activo else "desactivado"
+        messages.success(request, f"Empleado {empleado.nombre} {empleado.apellido} {estado_txt}.")
+        return redirect(f"/personal/panel/?parqueadero={empleado.parqueadero_id}")
+
+    return redirect("panel_admin")
+
+
+def crear_espacio_staff(request):
+    usuario_staff, rol_personal, parqueaderos_qs = _obtener_staff_y_parqueaderos(request)
+    if not usuario_staff or rol_personal != "ADMIN":
+        return redirect("panel_admin")
+
+    if request.method == "POST":
+        parqueadero_id = request.POST.get("parqueadero_id")
+        parqueadero = get_object_or_404(parqueaderos_qs, id=parqueadero_id)
+        numero = request.POST.get("numero", "").strip().upper()
+        tipo = request.POST.get("tipo", Vehiculo.Tipo.CARRO)
+
+        try:
+            Espacio.objects.create(
+                numero=numero,
+                tipo=tipo,
+                estado=Espacio.Estado.DISPONIBLE,
+                parqueadero=parqueadero,
+            )
+            messages.success(request, f"Espacio {numero} creado en {parqueadero.nombre}.")
+        except Exception as e:
+            messages.error(request, f"No se pudo crear el espacio: {e}")
+
+        return redirect(f"/personal/panel/?parqueadero={parqueadero.id}")
+
+    return redirect("panel_admin")
+
+
+def editar_empleado_staff(request, empleado_id):
+    usuario_staff, rol_personal, parqueaderos_qs = _obtener_staff_y_parqueaderos(request)
+    if not usuario_staff or rol_personal != "ADMIN":
+        return redirect("panel_admin")
+
+    empleado = get_object_or_404(Empleado, id=empleado_id, parqueadero__in=parqueaderos_qs)
+
+    if request.method == "POST":
+        nombre = request.POST.get("nombre", "").strip()
+        apellido = request.POST.get("apellido", "").strip()
+        documento = request.POST.get("documento", "").strip()
+        cargo = request.POST.get("cargo", "").strip()
+        telefono = request.POST.get("telefono", "").strip()
+        correo = request.POST.get("correo", "").strip().lower()
+        nueva_contrasena = request.POST.get("contrasena", "").strip()
+        nivel_acceso = request.POST.get("nivel_acceso", empleado.nivel_acceso)
+        activo = request.POST.get("activo") == "on"
+
+        if not (nombre and apellido and documento and cargo and correo):
+            messages.error(request, "Nombre, apellido, documento, cargo y correo son obligatorios.")
+        elif Empleado.objects.filter(documento=documento).exclude(id=empleado.id).exists():
+            messages.error(request, "Ya existe otro empleado con ese documento.")
+        elif Empleado.objects.filter(correo__iexact=correo).exclude(id=empleado.id).exists():
+            messages.error(request, "Ya existe otro empleado con ese correo.")
+        else:
+            empleado.nombre = nombre
+            empleado.apellido = apellido
+            empleado.documento = documento
+            empleado.cargo = cargo
+            empleado.telefono = telefono
+            empleado.correo = correo
+            empleado.nivel_acceso = nivel_acceso
+            empleado.activo = activo
+            if nueva_contrasena:
+                empleado.set_contrasena(nueva_contrasena)
+            empleado.save()
+            messages.success(request, f"Empleado {nombre} {apellido} actualizado.")
+
+        return redirect(f"/personal/panel/?parqueadero={empleado.parqueadero_id}")
+
+    return redirect(f"/personal/panel/?parqueadero={empleado.parqueadero_id}&editar_empleado={empleado.id}")
+
+
+def eliminar_empleado_staff(request, empleado_id):
+    usuario_staff, rol_personal, parqueaderos_qs = _obtener_staff_y_parqueaderos(request)
+    if not usuario_staff or rol_personal != "ADMIN":
+        return redirect("panel_admin")
+
+    if request.method == "POST":
+        empleado = get_object_or_404(Empleado, id=empleado_id, parqueadero__in=parqueaderos_qs)
+        parqueadero_id = empleado.parqueadero_id
+        nombre_completo = f"{empleado.nombre} {empleado.apellido}"
+        try:
+            empleado.delete()
+            messages.success(request, f"Empleado {nombre_completo} eliminado.")
+        except ProtectedError:
+            messages.error(request, f"No se puede eliminar a {nombre_completo} por registros asociados.")
+        return redirect(f"/personal/panel/?parqueadero={parqueadero_id}")
+
+    return redirect("panel_admin")
+
+
+def crear_tarifa_staff(request):
+    usuario_staff, rol_personal, parqueaderos_qs = _obtener_staff_y_parqueaderos(request)
+    if not usuario_staff or rol_personal != "ADMIN":
+        return redirect("panel_admin")
+
+    if request.method == "POST":
+        parqueadero = get_object_or_404(parqueaderos_qs, id=request.POST.get("parqueadero_id"))
+        descripcion = request.POST.get("descripcion", "").strip()
+        tipo_vehiculo = request.POST.get("tipo_vehiculo", "").strip()
+        val_min = request.POST.get("valor_minuto", "").strip()
+        val_hora = request.POST.get("valor_hora", "").strip()
+        val_dia = request.POST.get("valor_dia", "").strip()
+
+        tipos_validos = {code for code, _ in Vehiculo.Tipo.choices}
+        if not descripcion or tipo_vehiculo not in tipos_validos or not val_hora:
+            messages.error(request, "Completa descripción, tipo de vehículo y valor por hora.")
+        else:
+            try:
+                Tarifa.objects.create(
+                    parqueadero=parqueadero,
+                    descripcion=descripcion,
+                    tipo_vehiculo=tipo_vehiculo,
+                    valor_minuto=Decimal(val_min) if val_min else None,
+                    valor_hora=Decimal(val_hora),
+                    valor_dia=Decimal(val_dia) if val_dia else None,
+                )
+                messages.success(request, f"Tarifa '{descripcion}' creada.")
+            except Exception as e:
+                messages.error(request, f"No se pudo crear la tarifa: {e}")
+
+        return redirect(f"/personal/panel/?parqueadero={parqueadero.id}")
+
+    return redirect("panel_admin")
+
+
+def editar_tarifa_staff(request, tarifa_id):
+    usuario_staff, rol_personal, parqueaderos_qs = _obtener_staff_y_parqueaderos(request)
+    if not usuario_staff or rol_personal != "ADMIN":
+        return redirect("panel_admin")
+
+    tarifa = get_object_or_404(Tarifa, id=tarifa_id, parqueadero__in=parqueaderos_qs)
+
+    if request.method == "POST":
+        descripcion = request.POST.get("descripcion", "").strip()
+        tipo_vehiculo = request.POST.get("tipo_vehiculo", "").strip()
+        val_min = request.POST.get("valor_minuto", "").strip()
+        val_hora = request.POST.get("valor_hora", "").strip()
+        val_dia = request.POST.get("valor_dia", "").strip()
+
+        tipos_validos = {code for code, _ in Vehiculo.Tipo.choices}
+        if not descripcion or tipo_vehiculo not in tipos_validos or not val_hora:
+            messages.error(request, "Completa descripción, tipo de vehículo y valor por hora.")
+        else:
+            try:
+                tarifa.descripcion = descripcion
+                tarifa.tipo_vehiculo = tipo_vehiculo
+                tarifa.valor_minuto = Decimal(val_min) if val_min else None
+                tarifa.valor_hora = Decimal(val_hora)
+                tarifa.valor_dia = Decimal(val_dia) if val_dia else None
+                tarifa.save()
+                messages.success(request, f"Tarifa '{descripcion}' actualizada.")
+            except Exception as e:
+                messages.error(request, f"No se pudo actualizar la tarifa: {e}")
+
+        return redirect(f"/personal/panel/?parqueadero={tarifa.parqueadero_id}")
+
+    return redirect(f"/personal/panel/?parqueadero={tarifa.parqueadero_id}&editar_tarifa={tarifa.id}")
+
+
+def eliminar_tarifa_staff(request, tarifa_id):
+    usuario_staff, rol_personal, parqueaderos_qs = _obtener_staff_y_parqueaderos(request)
+    if not usuario_staff or rol_personal != "ADMIN":
+        return redirect("panel_admin")
+
+    if request.method == "POST":
+        tarifa = get_object_or_404(Tarifa, id=tarifa_id, parqueadero__in=parqueaderos_qs)
+        parqueadero_id = tarifa.parqueadero_id
+        desc = tarifa.descripcion
+        try:
+            tarifa.delete()
+            messages.success(request, f"Tarifa '{desc}' eliminada.")
+        except ProtectedError:
+            messages.error(request, f"No se puede eliminar '{desc}' porque tiene reservas asociadas.")
+        return redirect(f"/personal/panel/?parqueadero={parqueadero_id}")
+
+    return redirect("panel_admin")

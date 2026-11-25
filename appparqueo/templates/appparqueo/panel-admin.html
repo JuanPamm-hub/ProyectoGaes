@@ -1,0 +1,334 @@
+{% extends 'appparqueo/base.html' %}
+{% load static %}
+
+{% block title %}Panel Operativo | NEXOPARK{% endblock %}
+
+{% block content %}
+<div style="max-width: 1200px; margin: 28px auto; padding: 0 20px; color: #f8fafc;">
+
+  <!-- Cabecera -->
+  <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 16px; background: #11111b; border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 20px 24px; margin-bottom: 22px;">
+    <div>
+      <span style="display: inline-block; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.06em; padding: 4px 10px; border-radius: 999px; background: rgba(124, 58, 237, 0.22); color: #c4b5fd; margin-bottom: 6px;">
+        {% if rol_personal == 'ADMIN' %}ADMINISTRADOR{% else %}EMPLEADO · {{ admin.get_nivel_acceso_display|upper }}{% endif %}
+      </span>
+      <h1 style="margin: 0; font-size: 1.5rem;">Hola, {{ admin.nombre }} {{ admin.apellido }}</h1>
+      {% if parqueadero_actual %}
+        <p style="margin: 4px 0 0; color: #94a3b8; font-size: 0.9rem;">
+          Parqueadero activo: <strong style="color: #e2e8f0;">{{ parqueadero_actual.nombre }}</strong> · {{ parqueadero_actual.direccion }}
+        </p>
+      {% endif %}
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+      {% if rol_personal == 'ADMIN' and parqueaderos|length > 1 %}
+        <form method="GET" style="margin: 0;">
+          <select name="parqueadero" onchange="this.form.submit()" style="background: #1a1a28; color: #f8fafc; border: 1px solid rgba(255,255,255,0.16); padding: 9px 12px; border-radius: 10px;">
+            {% for p in parqueaderos %}
+              <option value="{{ p.id }}" {% if parqueadero_actual.id == p.id %}selected{% endif %}>{{ p.nombre }}</option>
+            {% endfor %}
+          </select>
+        </form>
+      {% endif %}
+
+      <a href="{% url 'cerrar_sesion_staff' %}" style="background: rgba(239, 68, 68, 0.16); color: #fca5a5; border: 1px solid rgba(248, 113, 113, 0.35); padding: 9px 14px; border-radius: 10px; text-decoration: none; font-size: 0.88rem; font-weight: 600;">
+        Cerrar sesión
+      </a>
+    </div>
+  </div>
+
+  {% if messages %}
+    <div style="margin-bottom: 18px; display: grid; gap: 8px;">
+      {% for message in messages %}
+        <div style="padding: 12px 16px; border-radius: 10px; background: rgba(124, 58, 237, 0.18); border: 1px solid rgba(167, 139, 250, 0.4); color: #ede9fe; font-size: 0.9rem;">
+          {{ message }}
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  {% if not parqueadero_actual %}
+    <div style="background: #11111b; border: 1px solid rgba(255,255,255,0.1); border-radius: 14px; padding: 28px; text-align: center; color: #94a3b8;">
+      No tienes ningún parqueadero asignado todavía.
+    </div>
+  {% else %}
+
+    <!-- Métricas rápidas -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 24px;">
+      <div style="background: #11111b; border: 1px solid rgba(255,255,255,0.09); border-radius: 14px; padding: 16px 18px;">
+        <span style="color: #94a3b8; font-size: 0.82rem;">Espacios disponibles</span>
+        <p style="margin: 6px 0 0; font-size: 1.6rem; font-weight: 800; color: #4ade80;">{{ total_disponibles }}</p>
+      </div>
+      <div style="background: #11111b; border: 1px solid rgba(255,255,255,0.09); border-radius: 14px; padding: 16px 18px;">
+        <span style="color: #94a3b8; font-size: 0.82rem;">Espacios ocupados</span>
+        <p style="margin: 6px 0 0; font-size: 1.6rem; font-weight: 800; color: #f87171;">{{ total_ocupados }}</p>
+      </div>
+      <div style="background: #11111b; border: 1px solid rgba(255,255,255,0.09); border-radius: 14px; padding: 16px 18px;">
+        <span style="color: #94a3b8; font-size: 0.82rem;">En mantenimiento</span>
+        <p style="margin: 6px 0 0; font-size: 1.6rem; font-weight: 800; color: #fbbf24;">{{ total_mantenimiento }}</p>
+      </div>
+      <div style="background: #11111b; border: 1px solid rgba(255,255,255,0.09); border-radius: 14px; padding: 16px 18px;">
+        <span style="color: #94a3b8; font-size: 0.82rem;">Reservas activas</span>
+        <p style="margin: 6px 0 0; font-size: 1.6rem; font-weight: 800; color: #a78bfa;">{{ reservas_activas|length }}</p>
+      </div>
+    </div>
+
+    <!-- SECCIÓN 1: CONTROL DE ESPACIOS -->
+    <section style="background: #11111b; border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 20px 24px; margin-bottom: 24px;">
+      <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 16px;">
+        <div>
+          <h2 style="margin: 0; font-size: 1.15rem;">Control de espacios en tiempo real</h2>
+          <p style="margin: 4px 0 0; color: #94a3b8; font-size: 0.85rem;">Marca qué espacios se ocuparon, se desocuparon o pasaron a mantenimiento.</p>
+        </div>
+
+        {% if rol_personal == 'ADMIN' %}
+          <form method="POST" action="{% url 'crear_espacio_staff' %}" style="display: flex; gap: 8px; flex-wrap: wrap;">
+            {% csrf_token %}
+            <input type="hidden" name="parqueadero_id" value="{{ parqueadero_actual.id }}">
+            <input type="text" name="numero" placeholder="Ej: A-01" required style="background: #1a1a28; color: #fff; border: 1px solid rgba(255,255,255,0.15); padding: 8px 10px; border-radius: 8px; width: 100px;">
+            <select name="tipo" style="background: #1a1a28; color: #fff; border: 1px solid rgba(255,255,255,0.15); padding: 8px 10px; border-radius: 8px;">
+              {% for code, label in tipos_vehiculo %}
+                <option value="{{ code }}">{{ label }}</option>
+              {% endfor %}
+            </select>
+            <button type="submit" style="background: #7c3aed; color: #fff; border: none; padding: 8px 14px; border-radius: 8px; font-weight: 600; cursor: pointer;">+ Agregar espacio</button>
+          </form>
+        {% endif %}
+      </div>
+
+      {% if espacios %}
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px;">
+          {% for esp in espacios %}
+            <div style="background: #181826; border: 1px solid {% if esp.estado == 'DISPONIBLE' %}rgba(74, 222, 128, 0.35){% elif esp.estado == 'OCUPADO' %}rgba(248, 113, 113, 0.35){% else %}rgba(251, 191, 36, 0.35){% endif %}; border-radius: 12px; padding: 14px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <strong style="font-size: 1.05rem;">{{ esp.numero }}</strong>
+                <span style="font-size: 0.72rem; padding: 2px 8px; border-radius: 999px; background: rgba(255,255,255,0.08); color: #cbd5e1;">{{ esp.get_tipo_display }}</span>
+              </div>
+
+              <p style="margin: 0 0 10px; font-size: 0.82rem; font-weight: 700; color: {% if esp.estado == 'DISPONIBLE' %}#4ade80{% elif esp.estado == 'OCUPADO' %}#f87171{% else %}#fbbf24{% endif %};">
+                ● {{ esp.get_estado_display }}
+              </p>
+
+              <form method="POST" action="{% url 'cambiar_estado_espacio' esp.id %}" style="display: flex; gap: 6px; flex-wrap: wrap;">
+                {% csrf_token %}
+                {% if esp.estado != 'DISPONIBLE' %}
+                  <button type="submit" name="estado" value="DISPONIBLE" style="flex: 1; background: rgba(74, 222, 128, 0.16); color: #86efac; border: 1px solid rgba(74, 222, 128, 0.35); padding: 6px 8px; border-radius: 7px; font-size: 0.76rem; cursor: pointer;">Desocupar</button>
+                {% endif %}
+                {% if esp.estado != 'OCUPADO' %}
+                  <button type="submit" name="estado" value="OCUPADO" style="flex: 1; background: rgba(248, 113, 113, 0.16); color: #fca5a5; border: 1px solid rgba(248, 113, 113, 0.35); padding: 6px 8px; border-radius: 7px; font-size: 0.76rem; cursor: pointer;">Ocupar</button>
+                {% endif %}
+                {% if esp.estado != 'MANTENIMIENTO' %}
+                  <button type="submit" name="estado" value="MANTENIMIENTO" style="background: rgba(251, 191, 36, 0.14); color: #fde68a; border: 1px solid rgba(251, 191, 36, 0.3); padding: 6px 8px; border-radius: 7px; font-size: 0.76rem; cursor: pointer;">Mant.</button>
+                {% endif %}
+              </form>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p style="color: #94a3b8; font-size: 0.9rem; margin: 0;">No hay espacios individuales registrados para este parqueadero.</p>
+      {% endif %}
+    </section>
+
+    <!-- SECCIÓN 2: RESERVAS ACTIVAS Y LLEGADAS -->
+    <section style="background: #11111b; border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 20px 24px; margin-bottom: 24px;">
+      <h2 style="margin: 0 0 4px; font-size: 1.15rem;">Reservas activas y control de llegada / salida</h2>
+      <p style="margin: 0 0 16px; color: #94a3b8; font-size: 0.85rem;">Confirma la llegada del vehículo o finaliza la estadía para liberar el espacio y cobrar.</p>
+
+      {% if reservas_activas %}
+        <div style="overflow-x: auto;">
+          <table style="width: 100%; border-collapse: collapse; font-size: 0.88rem;">
+            <thead>
+              <tr style="border-bottom: 1px solid rgba(255,255,255,0.1); color: #94a3b8; text-align: left;">
+                <th style="padding: 10px;">#</th>
+                <th style="padding: 10px;">Cliente</th>
+                <th style="padding: 10px;">Vehículo</th>
+                <th style="padding: 10px;">Inicio / Fin est.</th>
+                <th style="padding: 10px;">Monto actual</th>
+                <th style="padding: 10px;">Acciones operativas</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in reservas_activas %}
+                <tr style="border-bottom: 1px solid rgba(255,255,255,0.06);">
+                  <td style="padding: 10px; font-weight: 700;">#{{ item.obj.id }}</td>
+                  <td style="padding: 10px;">{{ item.obj.cliente.nombre }} {{ item.obj.cliente.apellido }}</td>
+                  <td style="padding: 10px;"><strong>{{ item.obj.vehiculo.placa }}</strong> ({{ item.obj.vehiculo.get_tipo_display }})</td>
+                  <td style="padding: 10px; color: #cbd5e1;">
+                    {{ item.obj.fecha_inicio|date:"d/m H:i" }} → {% if item.obj.fecha_fin %}{{ item.obj.fecha_fin|date:"d/m H:i" }}{% else %}—{% endif %}
+                  </td>
+                  <td style="padding: 10px; font-weight: 700; color: #c4b5fd;">${{ item.calculo.monto_total|floatformat:0 }}</td>
+                  <td style="padding: 10px;">
+                    <form method="POST" action="{% url 'accion_reserva_staff' item.obj.id %}" style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;">
+                      {% csrf_token %}
+                      <button type="submit" name="accion" value="confirmar_llegada" style="background: rgba(59, 130, 246, 0.2); color: #93c5fd; border: 1px solid rgba(96, 165, 250, 0.4); padding: 6px 10px; border-radius: 7px; font-size: 0.78rem; cursor: pointer;">
+                        Confirmar llegada
+                      </button>
+                      <select name="metodo_pago" style="background: #1a1a28; color: #fff; border: 1px solid rgba(255,255,255,0.15); padding: 5px 8px; border-radius: 7px; font-size: 0.78rem;">
+                        <option value="EFECTIVO">Efectivo</option>
+                        <option value="TARJETA">Tarjeta</option>
+                        <option value="TRANSFERENCIA">Transferencia</option>
+                      </select>
+                      <button type="submit" name="accion" value="finalizar" style="background: rgba(74, 222, 128, 0.2); color: #86efac; border: 1px solid rgba(74, 222, 128, 0.4); padding: 6px 10px; border-radius: 7px; font-size: 0.78rem; cursor: pointer;">
+                        Finalizar y liberar
+                      </button>
+                      <button type="submit" name="accion" value="cancelar" style="background: rgba(239, 68, 68, 0.16); color: #fca5a5; border: 1px solid rgba(248, 113, 113, 0.35); padding: 6px 10px; border-radius: 7px; font-size: 0.78rem; cursor: pointer;">
+                        Cancelar
+                      </button>
+                    </form>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <p style="color: #94a3b8; font-size: 0.9rem; margin: 0;">No hay reservas activas pendientes en este parqueadero.</p>
+      {% endif %}
+    </section>
+
+    <!-- SECCIÓN 3: CRUD EMPLEADOS Y TARIFAS (SOLO ADMINISTRADOR) -->
+    {% if rol_personal == 'ADMIN' %}
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 20px;">
+
+        <!-- CRUD Empleados -->
+        <section style="background: #11111b; border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 20px 24px;">
+          <h2 style="margin: 0 0 4px; font-size: 1.15rem;">
+            {% if empleado_editar %}Editar empleado #{{ empleado_editar.id }}{% else %}Empleados del parqueadero{% endif %}
+          </h2>
+          <p style="margin: 0 0 14px; color: #94a3b8; font-size: 0.85rem;">Crea, edita, activa/desactiva o elimina empleados.</p>
+
+          {% if empleado_editar %}
+            <form method="POST" action="{% url 'editar_empleado_staff' empleado_editar.id %}" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; background: #181826; padding: 12px; border-radius: 10px; border: 1px solid rgba(167, 139, 250, 0.35);">
+              {% csrf_token %}
+              <input type="text" name="nombre" value="{{ empleado_editar.nombre }}" required style="background: #11111b; color: #fff; border: 1px solid rgba(255,255,255,0.15); padding: 8px 10px; border-radius: 8px;">
+              <input type="text" name="apellido" value="{{ empleado_editar.apellido }}" required style="background: #11111b; color: #fff; border: 1px solid rgba(255,255,255,0.15); padding: 8px 10px; border-radius: 8px;">
+              <input type="text" name="documento" value="{{ empleado_editar.documento }}" required style="background: #11111b; color: #fff; border: 1px solid rgba(255,255,255,0.15); padding: 8px 10px; border-radius: 8px;">
+              <input type="text" name="cargo" value="{{ empleado_editar.cargo }}" required style="background: #11111b; color: #fff; border: 1px solid rgba(255,255,255,0.15); padding: 8px 10px; border-radius: 8px;">
+              <input type="email" name="correo" value="{{ empleado_editar.correo|default:'' }}" required style="background: #11111b; color: #fff; border: 1px solid rgba(255,255,255,0.15); padding: 8px 10px; border-radius: 8px;">
+              <input type="password" name="contrasena" placeholder="Nueva clave (opcional)" style="background: #11111b; color: #fff; border: 1px solid rgba(255,255,255,0.15); padding: 8px 10px; border-radius: 8px;">
+              <select name="nivel_acceso" style="background: #11111b; color: #fff; border: 1px solid rgba(255,255,255,0.15); padding: 8px 10px; border-radius: 8px;">
+                {% for code, label in niveles_acceso %}
+                  <option value="{{ code }}" {% if empleado_editar.nivel_acceso == code %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
+              <label style="display: flex; align-items: center; gap: 6px; font-size: 0.85rem; color: #cbd5e1; padding: 0 4px;">
+                <input type="checkbox" name="activo" {% if empleado_editar.activo %}checked{% endif %}> Activo
+              </label>
+              <div style="grid-column: span 2; display: flex; gap: 8px;">
+                <button type="submit" style="flex: 1; background: #7c3aed; color: #fff; border: none; padding: 8px 12px; border-radius: 8px; font-weight: 600; cursor: pointer;">Guardar cambios</button>
+                <a href="/personal/panel/?parqueadero={{ parqueadero_actual.id }}" style="background: rgba(255,255,255,0.08); color: #cbd5e1; text-decoration: none; padding: 8px 12px; border-radius: 8px; font-size: 0.85rem;">Cancelar</a>
+              </div>
+            </form>
+          {% else %}
+            <form method="POST" action="{% url 'crear_empleado_staff' %}" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px;">
+              {% csrf_token %}
+              <input type="hidden" name="parqueadero_id" value="{{ parqueadero_actual.id }}">
+              <input type="text" name="nombre" placeholder="Nombre" required style="background: #1a1a28; color: #fff; border: 1px solid rgba(255,255,255,0.15); padding: 8px 10px; border-radius: 8px;">
+              <input type="text" name="apellido" placeholder="Apellido" required style="background: #1a1a28; color: #fff; border: 1px solid rgba(255,255,255,0.15); padding: 8px 10px; border-radius: 8px;">
+              <input type="text" name="documento" placeholder="Documento" required style="background: #1a1a28; color: #fff; border: 1px solid rgba(255,255,255,0.15); padding: 8px 10px; border-radius: 8px;">
+              <input type="text" name="cargo" placeholder="Cargo (ej: Operador)" required style="background: #1a1a28; color: #fff; border: 1px solid rgba(255,255,255,0.15); padding: 8px 10px; border-radius: 8px;">
+              <input type="email" name="correo" placeholder="Correo de acceso" required style="background: #1a1a28; color: #fff; border: 1px solid rgba(255,255,255,0.15); padding: 8px 10px; border-radius: 8px;">
+              <input type="password" name="contrasena" placeholder="Contraseña" required style="background: #1a1a28; color: #fff; border: 1px solid rgba(255,255,255,0.15); padding: 8px 10px; border-radius: 8px;">
+              <select name="nivel_acceso" style="background: #1a1a28; color: #fff; border: 1px solid rgba(255,255,255,0.15); padding: 8px 10px; border-radius: 8px;">
+                {% for code, label in niveles_acceso %}
+                  <option value="{{ code }}">{{ label }}</option>
+                {% endfor %}
+              </select>
+              <button type="submit" style="background: #7c3aed; color: #fff; border: none; padding: 8px 12px; border-radius: 8px; font-weight: 600; cursor: pointer;">Registrar empleado</button>
+            </form>
+          {% endif %}
+
+          {% for emp in empleados %}
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 0; border-top: 1px solid rgba(255,255,255,0.07); flex-wrap: wrap;">
+              <div>
+                <strong>{{ emp.nombre }} {{ emp.apellido }}</strong> · <span style="color: #94a3b8; font-size: 0.82rem;">{{ emp.cargo }}</span>
+                <div style="font-size: 0.78rem; color: #64748b;">{{ emp.correo }}</div>
+              </div>
+              <div style="display: flex; gap: 6px; align-items: center;">
+                <form method="POST" action="{% url 'toggle_empleado_staff' emp.id %}" style="margin: 0;">
+                  {% csrf_token %}
+                  <button type="submit" style="background: {% if emp.activo %}rgba(74, 222, 128, 0.16){% else %}rgba(239, 68, 68, 0.16){% endif %}; color: {% if emp.activo %}#86efac{% else %}#fca5a5{% endif %}; border: 1px solid rgba(255,255,255,0.12); padding: 5px 9px; border-radius: 7px; font-size: 0.75rem; cursor: pointer;">
+                    {% if emp.activo %}Activo{% else %}Inactivo{% endif %}
+                  </button>
+                </form>
+                <a href="/personal/panel/?parqueadero={{ parqueadero_actual.id }}&editar_empleado={{ emp.id }}" style="background: rgba(59, 130, 246, 0.18); color: #93c5fd; text-decoration: none; padding: 5px 9px; border-radius: 7px; font-size: 0.75rem;">Editar</a>
+                <form method="POST" action="{% url 'eliminar_empleado_staff' emp.id %}" style="margin: 0;" onsubmit="return confirm('¿Eliminar a {{ emp.nombre }} {{ emp.apellido }}?');">
+                  {% csrf_token %}
+                  <button type="submit" style="background: rgba(239, 68, 68, 0.16); color: #fca5a5; border: 1px solid rgba(248, 113, 113, 0.35); padding: 5px 9px; border-radius: 7px; font-size: 0.75rem; cursor: pointer;">Eliminar</button>
+                </form>
+              </div>
+            </div>
+          {% empty %}
+            <p style="color: #94a3b8; font-size: 0.88rem;">No hay empleados registrados en este parqueadero.</p>
+          {% endfor %}
+        </section>
+
+        <!-- CRUD Tarifas -->
+        <section style="background: #11111b; border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 20px 24px;">
+          <h2 style="margin: 0 0 4px; font-size: 1.15rem;">
+            {% if tarifa_editar %}Editar tarifa #{{ tarifa_editar.id }}{% else %}Tarifas del parqueadero{% endif %}
+          </h2>
+          <p style="margin: 0 0 14px; color: #94a3b8; font-size: 0.85rem;">Crea, edita o elimina tarifas por tipo de vehículo en {{ parqueadero_actual.nombre }}.</p>
+
+          {% if tarifa_editar %}
+            <form method="POST" action="{% url 'editar_tarifa_staff' tarifa_editar.id %}" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; background: #181826; padding: 12px; border-radius: 10px; border: 1px solid rgba(167, 139, 250, 0.35);">
+              {% csrf_token %}
+              <input type="text" name="descripcion" value="{{ tarifa_editar.descripcion }}" required style="grid-column: span 2; background: #11111b; color: #fff; border: 1px solid rgba(255,255,255,0.15); padding: 8px 10px; border-radius: 8px;">
+              <select name="tipo_vehiculo" style="background: #11111b; color: #fff; border: 1px solid rgba(255,255,255,0.15); padding: 8px 10px; border-radius: 8px;">
+                {% for code, label in tipos_vehiculo %}
+                  <option value="{{ code }}" {% if tarifa_editar.tipo_vehiculo == code %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
+              <input type="number" step="0.01" name="valor_hora" value="{{ tarifa_editar.valor_hora }}" placeholder="Valor hora" required style="background: #11111b; color: #fff; border: 1px solid rgba(255,255,255,0.15); padding: 8px 10px; border-radius: 8px;">
+              <input type="number" step="0.01" name="valor_minuto" value="{{ tarifa_editar.valor_minuto|default:'' }}" placeholder="Valor minuto (opc.)" style="background: #11111b; color: #fff; border: 1px solid rgba(255,255,255,0.15); padding: 8px 10px; border-radius: 8px;">
+              <input type="number" step="0.01" name="valor_dia" value="{{ tarifa_editar.valor_dia|default:'' }}" placeholder="Valor día (opc.)" style="background: #11111b; color: #fff; border: 1px solid rgba(255,255,255,0.15); padding: 8px 10px; border-radius: 8px;">
+              <div style="grid-column: span 2; display: flex; gap: 8px;">
+                <button type="submit" style="flex: 1; background: #7c3aed; color: #fff; border: none; padding: 8px 12px; border-radius: 8px; font-weight: 600; cursor: pointer;">Guardar tarifa</button>
+                <a href="/personal/panel/?parqueadero={{ parqueadero_actual.id }}" style="background: rgba(255,255,255,0.08); color: #cbd5e1; text-decoration: none; padding: 8px 12px; border-radius: 8px; font-size: 0.85rem;">Cancelar</a>
+              </div>
+            </form>
+          {% else %}
+            <form method="POST" action="{% url 'crear_tarifa_staff' %}" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px;">
+              {% csrf_token %}
+              <input type="hidden" name="parqueadero_id" value="{{ parqueadero_actual.id }}">
+              <input type="text" name="descripcion" placeholder="Descripción (ej: Tarifa carro)" required style="grid-column: span 2; background: #1a1a28; color: #fff; border: 1px solid rgba(255,255,255,0.15); padding: 8px 10px; border-radius: 8px;">
+              <select name="tipo_vehiculo" style="background: #1a1a28; color: #fff; border: 1px solid rgba(255,255,255,0.15); padding: 8px 10px; border-radius: 8px;">
+                {% for code, label in tipos_vehiculo %}
+                  <option value="{{ code }}">{{ label }}</option>
+                {% endfor %}
+              </select>
+              <input type="number" step="0.01" name="valor_hora" placeholder="Valor hora" required style="background: #1a1a28; color: #fff; border: 1px solid rgba(255,255,255,0.15); padding: 8px 10px; border-radius: 8px;">
+              <input type="number" step="0.01" name="valor_minuto" placeholder="Valor minuto (opc.)" style="background: #1a1a28; color: #fff; border: 1px solid rgba(255,255,255,0.15); padding: 8px 10px; border-radius: 8px;">
+              <input type="number" step="0.01" name="valor_dia" placeholder="Valor día (opc.)" style="background: #1a1a28; color: #fff; border: 1px solid rgba(255,255,255,0.15); padding: 8px 10px; border-radius: 8px;">
+              <button type="submit" style="grid-column: span 2; background: #7c3aed; color: #fff; border: none; padding: 8px 12px; border-radius: 8px; font-weight: 600; cursor: pointer;">+ Agregar tarifa</button>
+            </form>
+          {% endif %}
+
+          {% for t in tarifas %}
+            <div style="padding: 10px 0; border-top: 1px solid rgba(255,255,255,0.07); display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;">
+              <div>
+                <strong>{{ t.get_tipo_vehiculo_display }}</strong>
+                <div style="font-size: 0.8rem; color: #94a3b8;">{{ t.descripcion }}</div>
+                <div style="font-size: 0.82rem; color: #cbd5e1; margin-top: 2px;">
+                  Min: ${{ t.valor_minuto|default:0|floatformat:0 }} · Hora: ${{ t.valor_hora|floatformat:0 }} · <strong style="color: #c4b5fd;">Día: ${{ t.valor_dia|default:0|floatformat:0 }}</strong>
+                </div>
+              </div>
+              <div style="display: flex; gap: 6px;">
+                <a href="/personal/panel/?parqueadero={{ parqueadero_actual.id }}&editar_tarifa={{ t.id }}" style="background: rgba(59, 130, 246, 0.18); color: #93c5fd; text-decoration: none; padding: 5px 9px; border-radius: 7px; font-size: 0.75rem;">Editar</a>
+                <form method="POST" action="{% url 'eliminar_tarifa_staff' t.id %}" style="margin: 0;" onsubmit="return confirm('¿Eliminar la tarifa {{ t.descripcion }}?');">
+                  {% csrf_token %}
+                  <button type="submit" style="background: rgba(239, 68, 68, 0.16); color: #fca5a5; border: 1px solid rgba(248, 113, 113, 0.35); padding: 5px 9px; border-radius: 7px; font-size: 0.75rem; cursor: pointer;">Eliminar</button>
+                </form>
+              </div>
+            </div>
+          {% empty %}
+            <p style="color: #94a3b8; font-size: 0.88rem;">No hay tarifas creadas para este parqueadero.</p>
+          {% endfor %}
+        </section>
+
+      </div>
+    {% endif %}
+
+  {% endif %}
+</div>
+{% endblock %}

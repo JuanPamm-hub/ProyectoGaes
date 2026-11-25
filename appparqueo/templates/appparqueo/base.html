@@ -16,7 +16,7 @@
         href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
 </head>
 
-<body class="{% if request.session.cliente_id %}con-menu{% else %}sin-menu{% endif %}">
+<body class="{% if request.session.cliente_id and not request.session.es_staff %}con-menu{% else %}sin-menu{% endif %}">
 
     <!-- ENCABEZADO -->
     <header class="encabezado">
@@ -28,7 +28,10 @@
 
         <div class="usuario">
 
-            {% if request.session.cliente_id %}
+            {% if request.session.es_staff %}
+                {# En el panel de personal no mostramos datos ni botones aquí porque ya los incluye el propio panel #}
+
+            {% elif request.session.cliente_id %}
 
                 <i class="fa-solid fa-user-circle"></i>
                 <span>Hola, {{ request.session.cliente_nombre }}</span>
@@ -38,7 +41,7 @@
                     Cerrar sesión
                 </a>
 
-            {% else %}
+            {% elif request.resolver_match.url_name != 'login_staff' %}
 
                 <a href="{% url 'iniciar_sesion' %}" class="boton-login">
                     <i class="fa-solid fa-right-to-bracket"></i>
@@ -56,8 +59,8 @@
 
     </header>
 
-    <!-- MENU DE NAVEGACION -->
-    {% if request.session.cliente_id %}
+    <!-- MENU DE NAVEGACION (SOLO CLIENTE) -->
+    {% if request.session.cliente_id and not request.session.es_staff %}
         <nav class="menu">
 
             <a href="{% url 'inicio' %}">
@@ -91,7 +94,7 @@
     <!-- CONTENIDO PRINCIPAL -->
     <main class="contenedor">
 
-        {% if messages %}
+        {% if messages and not request.session.es_staff %}
             <div class="mensajes">
                 {% for message in messages %}
                     <div class="mensaje {{ message.tags }}">

@@ -340,6 +340,72 @@
   cursor: pointer;
 }
 
+/* MÉTODO DE PAGO (EFECTIVO / TARJETA) */
+.metodos-pago-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.opcion-pago {
+  position: relative;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  background: #11111e;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 9px;
+  padding: 9px 10px;
+  cursor: pointer;
+  margin-bottom: 0 !important;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.opcion-pago input[type="radio"] {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.opcion-pago-contenido {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #cbd5e1;
+}
+
+.opcion-pago-contenido i {
+  color: #a78bfa;
+  font-size: 0.9rem;
+}
+
+.opcion-pago.activo,
+.opcion-pago:has(input:checked) {
+  border-color: #8b5cf6;
+  background: rgba(124, 58, 237, 0.18);
+}
+
+.opcion-pago.activo .opcion-pago-contenido,
+.opcion-pago:has(input:checked) .opcion-pago-contenido {
+  color: #ffffff;
+}
+
+.detalle-tarjeta-box {
+  background: #11111e;
+  border: 1px dashed rgba(139, 92, 246, 0.35);
+  border-radius: 9px;
+  padding: 10px;
+  margin-bottom: 10px;
+}
+
+.tarjeta-mini-fila {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
 .ayuda-campo {
   display: block;
   margin-top: 5px;

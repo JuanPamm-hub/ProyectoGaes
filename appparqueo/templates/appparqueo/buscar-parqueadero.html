@@ -119,6 +119,78 @@
               </select>
             </div>
 
+            <!-- MÉTODO DE PAGO -->
+            <div class="campo-grupo">
+              <label>Método de pago</label>
+              <div class="metodos-pago-grid" role="radiogroup" aria-label="Método de pago">
+                <label class="opcion-pago activo" for="pago_efectivo">
+                  <input
+                    type="radio"
+                    id="pago_efectivo"
+                    name="metodo_pago"
+                    value="EFECTIVO"
+                    checked
+                    onchange="toggleDetalleTarjeta()"
+                  >
+                  <span class="opcion-pago-contenido">
+                    <i class="fa-solid fa-money-bill-wave"></i>
+                    <span>Efectivo</span>
+                  </span>
+                </label>
+
+                <label class="opcion-pago" for="pago_tarjeta">
+                  <input
+                    type="radio"
+                    id="pago_tarjeta"
+                    name="metodo_pago"
+                    value="TARJETA"
+                    onchange="toggleDetalleTarjeta()"
+                  >
+                  <span class="opcion-pago-contenido">
+                    <i class="fa-regular fa-credit-card"></i>
+                    <span>Tarjeta</span>
+                  </span>
+                </label>
+              </div>
+            </div>
+
+            <div id="bloque-pago-tarjeta" class="detalle-tarjeta-box oculto">
+              <div class="campo-grupo">
+                <label for="numero_tarjeta_simulado">Número de tarjeta (simulación)</label>
+                <input
+                  type="text"
+                  id="numero_tarjeta_simulado"
+                  name="numero_tarjeta_simulado"
+                  inputmode="numeric"
+                  maxlength="19"
+                  placeholder="•••• •••• •••• 4242"
+                >
+              </div>
+              <div class="tarjeta-mini-fila">
+                <div class="campo-grupo">
+                  <label for="vencimiento_tarjeta">Vencimiento</label>
+                  <input
+                    type="text"
+                    id="vencimiento_tarjeta"
+                    name="vencimiento_tarjeta"
+                    maxlength="5"
+                    placeholder="MM/AA"
+                  >
+                </div>
+                <div class="campo-grupo">
+                  <label for="cvv_tarjeta">CVV</label>
+                  <input
+                    type="password"
+                    id="cvv_tarjeta"
+                    name="cvv_tarjeta"
+                    maxlength="4"
+                    placeholder="123"
+                  >
+                </div>
+              </div>
+              <small class="ayuda-campo">Pago simulado para pruebas del sistema NEXOPARK.</small>
+            </div>
+
             <div class="resumen-cobro">
               <span>Estadía estimada:</span>
               <strong id="total-estimado-reserva">$0</strong>
@@ -256,6 +328,21 @@
       if (horaLlegadaInput) {
         horaLlegadaInput.required = activa;
         if (!activa) horaLlegadaInput.value = "";
+      }
+    }
+
+    function toggleDetalleTarjeta() {
+      const radioTarjeta = document.getElementById("pago_tarjeta");
+      const bloqueTarjeta = document.getElementById("bloque-pago-tarjeta");
+      const labelsPago = document.querySelectorAll(".opcion-pago");
+
+      labelsPago.forEach((lbl) => {
+        const input = lbl.querySelector('input[type="radio"]');
+        lbl.classList.toggle("activo", Boolean(input && input.checked));
+      });
+
+      if (bloqueTarjeta && radioTarjeta) {
+        bloqueTarjeta.classList.toggle("oculto", !radioTarjeta.checked);
       }
     }
 
@@ -577,6 +664,7 @@
     }
 
     window.addEventListener("DOMContentLoaded", () => {
+      toggleDetalleTarjeta();
       ubicarUsuario(true);
     });
   </script>
